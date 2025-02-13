@@ -345,10 +345,21 @@ bool link(const std::string& wd,
 	}
 	if(linkType == 0){
 		std::string compiler;
-		if(getExt(parameters[0]) == "cpp")
-			compiler = "g++ ";
-		else
-			compiler = "gcc ";
+		if(parameters[5] == "x86"){
+        	if(getExt(parameters[0]) == "cpp") compiler = "g++ ";
+        	else compiler = "gcc ";
+    	}
+    	else if(parameters[5] == "riscv"){
+        	if(getExt(parameters[0]) == "cpp") compiler = "riscv64-linux-gnu-g++ ";
+        	else compiler = "riscv64-linux-gnu-gcc ";
+    	}
+    	else{
+        	std::cout << "================== WTF ==================" << std::endl;
+        	std::cout << "architecture is: " << parameters[5] << std::endl;
+        	std::cout << "how the fuck did it happen" << std::endl;
+        	std::cout << std::endl;
+        	return false;
+    	}
 		std::string cmd = compiler;
 		for(int i = 0; i < toLink.size(); ++i)
 			cmd += (toLink[i] + " ");
@@ -357,6 +368,11 @@ bool link(const std::string& wd,
 		system(cmd.c_str());
 	}
 	else if(linkType == 1){
+		if(parameters[5] != "x86"){
+			std::cout << "==================== ERROR ====================" << std::endl;
+			std::cout << "To build library you need to compile project for x86 architecture" << std::endl;
+			return false;
+		}
 		std::string cmd = "ar rc " + cd + "/" + parameters[1] + " ";
 		for(int i = 0; i < toLink.size(); ++i)
 			cmd += (toLink[i] + " ");

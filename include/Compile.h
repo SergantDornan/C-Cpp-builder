@@ -18,6 +18,8 @@ void updateFile(std::vector<std::string>&,const std::string&,
 	const std::vector<std::string>&,
 	const std::string&, std::vector<std::string>&);
 void compileFile(const std::string&, const std::vector<std::string>&,
-	const std::string&,const bool);
+	const std::string&,const bool,const std::vector<std::string>&);
 void oneThreadCompile(const std::vector<std::string>&, 
-	const std::vector<std::string>&,const std::string&,const bool);
+	const std::vector<std::string>&,const std::string&,const bool,
+	const std::vector<std::string>&);
+bool checkProgram(const std::string&);

@@ -1,4 +1,9 @@
 #include "Compile.h"
+bool checkProgram(const std::string& programName) {
+    std::string command = "which " + programName + " > /dev/null 2>&1";
+    int result = system(command.c_str());
+    return result == 0;
+}
 void getIncludes(std::vector<std::string>& includes,
 	const std::vector<std::string>& allHeaders,
 	const std::vector<std::string>& allSource,
@@ -42,6 +47,23 @@ std::vector<std::string> compile(const std::string& wd,const std::vector<std::st
     const std::vector<std::string>& allSource,
     const bool changeSet, const bool log){
 
+
+    if(parameters[5] == "riscv"){
+        if(!checkProgram("riscv64-linux-gnu-gcc")){
+            std::cout << "========================= ERROR =========================" << std::endl;
+            std::cout << "You trying to compile for riscv architecture," << std::endl;
+            std::cout << "but no compiler for C language found" << std::endl;
+            std::cout << "This builder works with riscv64-linux-gnu-gcc compiler" << std::endl;
+            std::cout << "Install riscv64-linux-gnu-gcc to compile C" << std::endl;
+        }
+        if(!checkProgram("riscv64-linux-gnu-g++")){
+            std::cout << "========================= ERROR =========================" << std::endl;
+            std::cout << "You trying to compile for riscv architecture," << std::endl;
+            std::cout << "but no compiler for C++ language found" << std::endl;
+            std::cout << "This builder works with riscv64-linux-gnu-g++ compiler" << std::endl;
+            std::cout << "Install riscv64-linux-gnu-g++ to compile C++" << std::endl;
+        }
+    }
     std::vector<std::string> incDirs, toCompile;
     for(int i = 0; i < allHeaders.size();++i){
         std::string folder = getFolder(allHeaders[i]);
@@ -66,7 +88,6 @@ std::vector<std::string> compile(const std::string& wd,const std::vector<std::st
                 std::cout << "====== Compile.cpp: compile() ======" << std::endl;
                 std::cout << "Cannot open file: " << HDdirs[i] << std::endl;
                 std::cout << "Try launching builder with --rebuild / -reb flag" << std::endl;       
-                std::cout << "code 1" << std::endl;
                 std::cout << std::endl;
                 return std::vector<std::string>{};
             }
@@ -90,7 +111,6 @@ std::vector<std::string> compile(const std::string& wd,const std::vector<std::st
                 std::cout << "====== Compile.cpp: compile() ======" << std::endl;
                 std::cout << "Cannot open file: " << SDdirs[i] << std::endl;
                 std::cout << "Try launching builder with --rebuild / -reb flag" << std::endl;       
-                std::cout << "code 2" << std::endl;
                 std::cout << std::endl;
                 return std::vector<std::string>{};
             }
@@ -188,7 +208,7 @@ std::vector<std::string> compile(const std::string& wd,const std::vector<std::st
     for (int i = 0; i < multiCompile.size(); ++i)
         threads.push_back(std::thread(oneThreadCompile, 
             std::ref(multiCompile[i]),
-            std::ref(incDirs), std::ref(bd),log));
+            std::ref(incDirs), std::ref(bd),log,std::ref(parameters)));
     for (auto& thread : threads) {
         if (thread.joinable())
             thread.join(); 
@@ -257,21 +277,42 @@ void updateFile(std::vector<std::string>& toCompile,
 
 }
 void compileFile(const std::string& path, 
-    const std::vector<std::string>& incDirs,const std::string& bd, const bool log){
+    const std::vector<std::string>& incDirs,const std::string& bd, const bool log,
+    const std::vector<std::string>& parameters){
 
-
-    if(log)
-        std::cout << "Compiling " << getName(path) << std::endl;
-    std::string compiler;
-    std::string flags;
-    if(getExt(path) == "cpp"){
-        compiler = "g++ ";
-        flags = (Cppstandart + " ");
+    std::string arch = parameters[5];
+    std::string as, compiler, flags;
+    if(arch == "x86"){
+        if(getExt(path) == "cpp"){
+            compiler = "g++ ";
+            flags = (Cppstandart + " ");
+        }
+        else{
+            compiler = "gcc ";
+            flags = (Cstandart + " ");
+        }
+        as = "as ";
+    }
+    else if(arch == "riscv"){
+        if(getExt(path) == "cpp"){
+            compiler = "riscv64-linux-gnu-g++ ";
+            flags = (Cppstandart + " ");
+        }
+        else{
+            compiler = "riscv64-linux-gnu-gcc ";
+            flags = (Cstandart + " ");
+        }
+        as = "riscv64-linux-gnu-as ";
     }
     else{
-        compiler = "gcc ";
-        flags = (Cstandart + " ");
+        std::cout << "================== WTF ==================" << std::endl;
+        std::cout << "architecture is: " << arch << std::endl;
+        std::cout << "how the fuck did it happen" << std::endl;
+        std::cout << std::endl;
+        return;
     }
+    if(log)
+        std::cout << "Compiling " << getName(path) << std::endl;
     flags += (opt + " ");
     flags += (debug + " ");
     flags += (otherFlags + " ");
@@ -283,12 +324,19 @@ void compileFile(const std::string& path,
         include += std::string("-I" + incDirs[i] + " ");
     std::string cmd = compiler + flags + include + path + " -S -o " + asmFile;
     system(cmd.c_str());
-    cmd = "as " + asmFile + " -o " + objFile;
+    cmd = as + asmFile + " -o " + objFile;
     system(cmd.c_str());
+    if(arch != "x86"){
+        if(getExt(path) == "cpp") compiler = "g++ ";
+        else compiler = "gcc ";
+        cmd = compiler + flags + include + path + " -S -o " + asmFile;
+        system(cmd.c_str());
+    }
 }
 void oneThreadCompile(const std::vector<std::string>& toCompile, 
-    const std::vector<std::string>& incDirs,const std::string& bd,const bool log){
+    const std::vector<std::string>& incDirs,const std::string& bd,const bool log,
+    const std::vector<std::string>& parameters){
 
     for(int i = 0; i < toCompile.size(); ++i)
-        compileFile(toCompile[i],incDirs,bd,log);
+        compileFile(toCompile[i],incDirs,bd,log,parameters);
 }

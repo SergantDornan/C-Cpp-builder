@@ -1,3 +1,5 @@
+#ifndef BUILDERFILEWORK
+#define BUILDERFILEWORK
 #include "filework.h"
 #include <unistd.h>
 #include <limits.h>
@@ -21,3 +23,4 @@ void appendToFile(const std::string&, const std::string&);
 std::string formatTime(time_t timestamp);
 std::string getChangeTime(const std::string&);
 std::string getNameNoExt(const std::string&);
+#endif

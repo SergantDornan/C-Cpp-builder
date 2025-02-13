@@ -109,6 +109,8 @@ std::string createEssentials(const bool reb){
 		out << "-1" << std::endl;
 		out << "-1" << std::endl;
 		out << "-1" << std::endl;
+		out << "x86" << std::endl;
+		out << "-1" << std::endl;
 		out.close();
 		system(cmd.c_str());
 	}

@@ -75,24 +75,33 @@ const std::string root = getHomedir() + "/builder";
 int main(int argc, char* argv[]) {
     if(argc >= 2 && std::string(argv[1]) == "reinstall")
         uninstall();
-    bool gccFound = checkProgram("gcc");
-    bool asFound = checkProgram("as");
-    if(!gccFound)
-    	std::cout << "Install gcc before installation" << std::endl;
-    if(!asFound)
-    	std::cout << "Install as (to compile assembler) before installation" << std::endl;
-    if(!asFound || !gccFound)
-    	return 0;
+    if(!checkProgram("gcc")){
+        std::cout << "=============== ERROR ===============" << std::endl;
+        std::cout << "No gcc found" << std::endl;
+    	std::cout << "Install gcc to compile C" << std::endl;
+        std::cout << std::endl;
+    }
+    if(!checkProgram("g++")){
+        std::cout << "=============== ERROR ===============" << std::endl;
+        std::cout << "No g++ found" << std::endl;
+        std::cout << "Install g++ to compile C++" << std::endl;
+        std::cout << std::endl;
+    }
+    if(!checkProgram("make")){
+        std::cout << "=============== FATAL ERROR ===============" << std::endl;
+        std::cout << "No make found" << std::endl;
+        std::cout << "You need make to install builder" << std::endl;
+        std::cout << "This is fatal error, install make before installation" << std::endl;
+        return 0;
+    }
     if(exists(root)){
     	std::cout << "====================== ERROR ======================" << std::endl;
     	std::cout << "Folder: " << root << " already exists" << std::endl;
     	std::cout << "Remove folder before installation" << std::endl;
-    	return 0;
+        return 0;
     }
     std::string cmd = "mkdir " + root;
     system(cmd.c_str());
-
-
     std::ifstream makefile("./Makefile");
     std::vector<std::string> lines;
     std::string line;
