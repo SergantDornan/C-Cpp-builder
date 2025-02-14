@@ -6,7 +6,6 @@
 #include "Flags.h"
 // -log (Выводить все действия)
 // --rebuild -reb (Удалить папку проекта, потом восстановить)
-// --onefile -one
 // -o
 // run
 // uninstall
@@ -27,6 +26,9 @@
 // force unlink list
 // arch
 // additional -I list
+const std::vector<std::string> possibleFlags = {"--rebuild", "-reb", 
+	"-o", "--no-link-force", "--link-force", "--default-link",
+	"--no-link-lib", "-x86", "-riscv"};
 int main(int argc, char* argv[]){
 	if(cd.find(' ') != std::string::npos || 
 		cd.find('(') != std::string::npos ||
@@ -40,7 +42,11 @@ int main(int argc, char* argv[]){
 	std::vector<std::string> args;
 	for(int i = 1; i < argc; ++i)
 		args.push_back(std::string(argv[i]));
-
+	for(int i = 0; i < args.size(); ++i){
+		if(isFlag(args[i]) && find(possibleFlags, args[i]) == -1 &&
+			args[i][1] != 'I' && args[i][1] != 'l')
+			otherFlags += (args[i] + " ");
+	}
 	if(args.size() != 0 && args[0] == "uninstall"){
 		uninstall();
 		return 0;

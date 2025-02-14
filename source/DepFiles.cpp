@@ -24,9 +24,7 @@ bool createDepfiles(const std::string& wd,
 		if(!exists(line)){
 			changeSet = true;
 			std::string cmd = "rm " + dirs[i];
-			system(cmd.c_str());
-			if(log)
-				std::cout << "Erasing " << getName(dirs[i]) << std::endl;	
+			system(cmd.c_str());	
 		}
 		file.close();
 	}
@@ -49,8 +47,6 @@ bool createDepfiles(const std::string& wd,
 			changeSet = true;
 			std::string cmd = "rm " + dirs[i];
 			system(cmd.c_str());
-			if(log)
-				std::cout << "Erasing " << getName(dirs[i]) << std::endl;
 		}
 		file.close();
 	}
@@ -62,8 +58,6 @@ bool createDepfiles(const std::string& wd,
 		std::string file = wd + "/" + reqFolders[0] + "/" + subFolders[0] + "/" + getName(allHeaders[i]);
 		if(!exists(file)){
 			changeSet = true;
-			if(log)
-				std::cout << "Creating depFile: " << getName(file) << std::endl;
 			std::string cmd = "touch " + file;
 			system(cmd.c_str());
 			std::ofstream newfile(file);
@@ -77,8 +71,6 @@ bool createDepfiles(const std::string& wd,
 		std::string file = bd + "/" + subFolders[0] + "/" + getName(allSource[i]);
 		if(!exists(file)){
 			changeSet = true;
-			if(log)
-				std::cout << "Creating depFile: " << getName(file) << std::endl;
 			std::string cmd = "touch " + file;
 			system(cmd.c_str());
 			std::ofstream newfile(file);
@@ -87,8 +79,5 @@ bool createDepfiles(const std::string& wd,
 			newfile.close();
 		}
 	}
-
-	if(log)
-		std::cout << std::endl;
 	return changeSet;
 }

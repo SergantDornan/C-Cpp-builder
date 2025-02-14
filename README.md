@@ -1,6 +1,6 @@
 # installation
 ```
-g++ installer.cpp -o install # build installer
+g++ installer.cpp -o install # compile installer (in case you need it)
 ```
 
 ```
