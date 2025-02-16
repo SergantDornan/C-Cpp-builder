@@ -15,8 +15,9 @@
 // --no-link-lib
 // status - show config
 // -I<path> + include folder
-// -riscv compile for riscv arch
-// -x86 compile for x86 arch
+// /// <externLinkFlags> ///
+// // <externCompileFlags> //
+
 
 // Структура project config:
 // main input
@@ -24,11 +25,13 @@
 // libs linking
 // force link list
 // force unlink list
-// arch
+// compilers
 // additional -I list
+
+
 const std::vector<std::string> possibleFlags = {"--rebuild", "-reb", 
 	"-o", "--no-link-force", "--link-force", "--default-link",
-	"--no-link-lib", "-x86", "-riscv"};
+	"--no-link-lib", "--CC", "--CXX"};
 int main(int argc, char* argv[]){
 	if(cd.find(' ') != std::string::npos || 
 		cd.find('(') != std::string::npos ||
@@ -42,25 +45,46 @@ int main(int argc, char* argv[]){
 	std::vector<std::string> args;
 	for(int i = 1; i < argc; ++i)
 		args.push_back(std::string(argv[i]));
-	for(int i = 0; i < args.size(); ++i){
-		if(isFlag(args[i]) && find(possibleFlags, args[i]) == -1 &&
-			args[i][1] != 'I' && args[i][1] != 'l')
-			otherFlags += (args[i] + " ");
-	}
 	if(args.size() != 0 && args[0] == "uninstall"){
 		uninstall();
 		return 0;
 	}
+	bool getFlags = false;
+	for(int i = 0; i < args.size(); ++i){
+		if(args[i] == "//" || args[i] == "///")
+			getFlags = !getFlags;
+		else if(isFlag(args[i]) && find(possibleFlags, args[i]) == -1 &&
+			args[i][1] != 'I' && args[i][1] != 'l' && !getFlags)
+			otherFlags += (args[i] + " ");
+	}
+	for(int i = 0; i < args.size(); ++i){
+		if(args[i] == "//" && !getFlags)
+			getFlags = true;
+		else if(args[i] == "//" && getFlags){
+			getFlags = false;
+			break;
+		}
+		else if(getFlags && args[i] != "//")
+			externCompileFlags += (args[i] + " ");
+	}
+	for(int i = 0; i < args.size(); ++i){
+		if(args[i] == "///" && !getFlags)
+			getFlags = true;
+		else if(args[i] == "///" && getFlags){
+			getFlags = false;
+			break;
+		}
+		else if(getFlags && args[i] != "///")
+			externLinkFlags += (args[i] + " ");
+	}
 	//bool log = (find(args, "-log") != -1);
 	bool log = true;
 	bool rebuild = ((find(args, "-reb") != -1) || (find(args, "--rebuild") != -1) || 
-		(find(args, "-x86") != -1) || (find(args, "-riscv") != -1));
+		(find(args, "--CC") != -1) || (find(args, "--CXX") != -1));
 	bool run = (find(args, "run") != -1);
 	std::string wd = createEssentials(rebuild);
 	std::string projectConfig = wd + "/" + configFile;
 	std::vector<std::string> parameters = getParameters(args, projectConfig,cd);
-	if(find(args, "-riscv") != -1) parameters[5] = "riscv";
-	if(find(args, "-x86") != -1) parameters[5] = "x86";
 	bool relink = false;
 	if(find(args, "--no-link-force") != -1 || find(args, "--link-force") != -1 ||
 		find(args, "--default-link") != -1){
@@ -78,7 +102,7 @@ int main(int argc, char* argv[]){
 					isFlag(args[i+1]))){
 					std::cout << "==================== ERROR ====================" << std::endl;
 					std::cout << "no file name after --no-link-force flag" << std::endl;
-					return 1;
+					return -1;
 				}
 				newfUnlink.push_back(args[i+1]);
 			}
@@ -87,7 +111,7 @@ int main(int argc, char* argv[]){
 					isFlag(args[i+1]))){
 					std::cout << "==================== ERROR ====================" << std::endl;
 					std::cout << "no file name after --link-force flag" << std::endl;
-					return 1;
+					return -1;
 				}
 				newfLink.push_back(args[i+1]);
 			}
@@ -96,7 +120,7 @@ int main(int argc, char* argv[]){
 					isFlag(args[i+1]))){
 					std::cout << "==================== ERROR ====================" << std::endl;
 					std::cout << "no file name after --default-link flag" << std::endl;
-					return 1;
+					return -1;
 				}
 				defLink.push_back(args[i+1]);
 			}
@@ -168,7 +192,7 @@ int main(int argc, char* argv[]){
 				if((i + 1) >= args.size() || ((i + 1) < args.size() && isFlag(args[i+1]))){
 					std::cout << "===================== ERROR =====================" << std::endl;
 					std::cout << "No lib name after --no-link-lib flag" << std::endl;
-					return 1;
+					return -1;
 				}
 				rewrite = true;
 				auto it = exLibs.begin();
@@ -203,8 +227,8 @@ int main(int argc, char* argv[]){
 			std::cout << "Force linking files: " << parameters[3] << std::endl;
 		if(parameters[4] != "-1")
 			std::cout << "Force unlinking files: " << parameters[4] << std::endl;
-		if(parameters[5] != "x86")
-			std::cout << "Architecture: " << parameters[5] << std::endl;
+		if(parameters[5] != "default default")
+			std::cout << "Compilers for C and C++ : " << parameters[5] << std::endl;
 		if(parameters[6] != "-1")
 			std::cout << "Additional directories: " << parameters[6] << std::endl;
 		return 0;
@@ -229,7 +253,7 @@ int main(int argc, char* argv[]){
             	std::cout << "Additional directory: " << AddInc[i] << std::endl;
             	std::cout << "does not exists" << std::endl;
             	std::cout << "if it does write full path to this folder" << std::endl;
-            	return 1;
+            	return -1;
         	} 
 			getAllheaders(allHeaders, AddInc[i]);
 			getAllsource(allSource, AddInc[i]);
@@ -240,7 +264,7 @@ int main(int argc, char* argv[]){
 		std::cout << "===================== ERROR =====================" << std::endl;
 		std::cout << "Found two files with same name, cannot build:" << std::endl;
 		std::cout << sameFiles << std::endl;
-		return 1;
+		return -1;
 	}
 	std::vector<std::string> includes;
 	getIncludes(includes,allHeaders,allSource,parameters[0],true);

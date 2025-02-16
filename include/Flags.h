@@ -6,4 +6,5 @@ std::vector<std::string> getParameters(const std::vector<std::string>&,
 void getIdirs(const std::vector<std::string>&, std::string&);
 void findEntryFile(const std::vector<std::string>&, std::string&,
 	const std::string&);
-void getOflag(const std::vector<std::string>&, std::string&);
+void getNameAfterFlag(const std::vector<std::string>&,
+	const std::string&,std::string&);

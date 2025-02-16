@@ -7,6 +7,7 @@
 //	incl	externalVar(%rip)
 //	lock addl	$1, externalCounter(%rip)
 //	.set	aboba1,aboba2
+std::string externLinkFlags = " ";
 int pairFind(const std::vector<std::pair<std::string,std::string>>& v, const std::string& s){
 	for(int i = 0; i < v.size(); ++i){
 		if(v[i].first == s)
@@ -256,6 +257,9 @@ bool link(const std::string& wd,
 	if(parameters[2] != "-1"){
 		std::vector<std::string> libsToLink = split(parameters[2]);
 		getAllLibs(libDirs,libsToLink,cd);
+		auto addDirs = split(parameters[6]);
+		for(int i = 0; i < addDirs.size(); ++i)
+			getAllLibs(libDirs,libsToLink,addDirs[i]);
 		for(int i = 0; i < libDirs.size(); ++i)
 			flags += ("-L" + libDirs[i] + " ");
 		for(int i = 0; i < libsToLink.size(); ++i)
@@ -345,22 +349,18 @@ bool link(const std::string& wd,
 	}
 	if(linkType == 0){
 		std::string compiler;
-		if(parameters[5] == "x86"){
-        	if(getExt(parameters[0]) == "cpp") compiler = "g++ ";
-        	else compiler = "gcc ";
-    	}
-    	else if(parameters[5] == "riscv"){
-        	if(getExt(parameters[0]) == "cpp") compiler = "riscv64-linux-gnu-g++ ";
-        	else compiler = "riscv64-linux-gnu-gcc ";
-    	}
-    	else{
-        	std::cout << "================== WTF ==================" << std::endl;
-        	std::cout << "architecture is: " << parameters[5] << std::endl;
-        	std::cout << "how the fuck did it happen" << std::endl;
-        	std::cout << std::endl;
-        	return false;
-    	}
+		std::vector<std::string> compilers = split(parameters[5]);
+		if(getExt(parameters[0]) == "cpp"){
+			if(compilers[1] == "default") compiler = "g++ ";
+			else compiler = (compilers[1] + " ");
+		}
+        else{
+        	if(compilers[0] == "default") compiler = "gcc ";
+			else compiler = (compilers[0] + " ");
+		}
 		std::string cmd = compiler;
+		if(compiler != "gcc " && compiler != "g++ ")
+			cmd += externLinkFlags;
 		for(int i = 0; i < toLink.size(); ++i)
 			cmd += (toLink[i] + " ");
 		cmd += (flags + " ");
@@ -368,11 +368,6 @@ bool link(const std::string& wd,
 		system(cmd.c_str());
 	}
 	else if(linkType == 1){
-		if(parameters[5] != "x86"){
-			std::cout << "==================== ERROR ====================" << std::endl;
-			std::cout << "To build library you need to compile project for x86 architecture" << std::endl;
-			return false;
-		}
 		std::string cmd = "ar rc " + cd + "/" + parameters[1] + " ";
 		for(int i = 0; i < toLink.size(); ++i)
 			cmd += (toLink[i] + " ");

@@ -92,13 +92,14 @@ int main(int argc, char* argv[]) {
         std::cout << "No make found" << std::endl;
         std::cout << "You need make to install builder" << std::endl;
         std::cout << "This is fatal error, install make before installation" << std::endl;
-        return 0;
+        return -1;
     }
     if(exists(root)){
     	std::cout << "====================== ERROR ======================" << std::endl;
     	std::cout << "Folder: " << root << " already exists" << std::endl;
-    	std::cout << "Remove folder before installation" << std::endl;
-        return 0;
+        std::cout << "Cannot install builder" << std::endl;
+    	std::cout << "Remove " << root << " before installation" << std::endl;
+        return -1;
     }
     std::string cmd = "mkdir " + root;
     system(cmd.c_str());

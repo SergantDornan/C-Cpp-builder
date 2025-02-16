@@ -69,10 +69,17 @@ belder start.cpp -o libMylib.a # will create a static library
 
 --default-link [filename] let builder decide how to link this file (remove file from force link or force unlink list)
 
--x86 compile for x86 (default setting)
+--CC/CXX [compiler] Specify compiler. Type "default" to use standart gcc and g++ compiler
 
--riscv compile for riscv
+```
+belder config --CC /dir1/dir2/compiler # use custom compiler for C language
+belder config --CXX /dir1/dir2/compiler # use custom compiler for C++ language
+belder config --CC default # use standart gcc for C language
+belder config --CXX default # use standart g++ for C++ language
+```
 
 -I[path] additionally, specify the directory in which to search for headers and source files. This flag is required only for directories located outside the project directory. The specified directory will be treated in the same way as the main project directory, builder will find all headers and source files inside all subdirectories of the specified directory. You must specify the full path to the new directory
 
 --no-include [folder] remove folder added by the -I flag from config file
+
+Any flag not specified above will be considered as a flag to the compiler

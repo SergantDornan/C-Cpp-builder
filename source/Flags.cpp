@@ -26,7 +26,11 @@ std::vector<std::string> getParameters(const std::vector<std::string>& args,
 	while(std::getline(in, line)) parameters.push_back(line);
 	in.close();
 	findEntryFile(args,parameters[0],cd);
-	getOflag(args, parameters[1]);
+	auto compilers = split(parameters[5]);
+	getNameAfterFlag(args, "--CC", compilers[0]);
+	getNameAfterFlag(args, "--CXX", compilers[1]);
+	parameters[5] = (compilers[0] + " " + compilers[1]);
+	getNameAfterFlag(args, "-o", parameters[1]);
 	getIdirs(args, parameters[6]);
 	return parameters;
 }
@@ -93,13 +97,14 @@ void findEntryFile(const std::vector<std::string>& args, std::string& s,
 		}
 	}
 }
-void getOflag(const std::vector<std::string>& args, std::string& s){
-	int index = find(args, "-o");
+void getNameAfterFlag(const std::vector<std::string>& args,
+	const std::string& flag,std::string& s){
+	int index = find(args, flag);
 	if(index != -1){
 		if((index + 1) >= args.size() || ((index + 1) < args.size() &&
 			isFlag(args[index + 1]))){
 			std::cout << "=================== ERROR ===================" << std::endl;
-			std::cout << "no file name after -o flag" << std::endl;
+			std::cout << "no file name after " << flag << " flag" << std::endl;
 			return;
 		}
 		s = args[index + 1];

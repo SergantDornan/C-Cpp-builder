@@ -1,5 +1,6 @@
 #include "BuilderFilework.h"
 #include <thread>
+extern std::string externLinkFlags;
 const std::string postSharedLink = "export LD_LIBRARY_PATH=$LD_LIBRARY_PATH"; //(Добавлять папки как ..._PATH:./aboba:./boba)
 const size_t numT = std::thread::hardware_concurrency();
 std::vector<std::string> getCallFuncs(const std::string&);
