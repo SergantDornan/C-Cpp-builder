@@ -262,24 +262,28 @@ void compileFile(const std::string& path,
     std::vector<std::string> compilers = split(parameters[5]);
     bool defaultCompiler = true;
     if(getExt(path) == "cpp"){
-        if(compilers[1] == "default") 
+        if(compilers[1] == "default") {
             compiler = "g++ ";
+            flags += (Cppstandart + " ");
+        }
         else{
             compiler = (compilers[1] + " ");
             x86Compiler = "g++ ";
             defaultCompiler = false;
         }
-        flags += (Cppstandart + " ");
+       
     }
     else{
-        if(compilers[0] == "default")
+        if(compilers[0] == "default"){
             compiler = "gcc ";
+            flags += (Cstandart + " ");
+        }
         else{
             compiler = (compilers[0] + " ");
             x86Compiler = "gcc ";
             defaultCompiler = false;
         }
-        flags += (Cstandart + " ");
+        
     }
     if(defaultCompiler){
         std::string as = "as ";
