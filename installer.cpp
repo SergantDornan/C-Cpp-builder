@@ -133,7 +133,7 @@ int main(int argc, char* argv[]) {
         cmd = "make -j " + std::to_string(numThreads);
         system(cmd.c_str());
     }
-    if(exists(root + "/builder"))
+    if(exists(root + "/builder") && doMake)
         std::cout << "================= Builder has been installed =================" << std::endl;
     return 0;
 }
