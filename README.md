@@ -63,7 +63,7 @@ belder start.cpp -o libMylib.a # will create a static library
 
 --no-link-lib [libName] unlink lib (remove it from config file)
 
---no-link-force [filename] unlink file with force
+--no-link-force [file_name/folder_name] unlink file or folder with force
 
 --link-force [filename] link file with force
 

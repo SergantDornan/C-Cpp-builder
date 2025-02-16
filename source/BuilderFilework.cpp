@@ -30,25 +30,29 @@ std::string getFolder(const std::string& path){
     }
     return "";
 }
-void getAllheaders(std::vector<std::string>& headers,const std::string& path){
+void getAllheaders(std::vector<std::string>& headers,const std::string& path,
+ const std::string& forceUnlink){
     auto dirs = getDirs(path);
+    auto v = split(forceUnlink);
     for(int i = 1; i < dirs.size(); ++i){
         if((getExt(dirs[i]) == "h" || getExt(dirs[i]) == "hpp") 
             && find(headers, dirs[i]) == -1)
             headers.push_back(dirs[i]);
-        if(std::filesystem::is_directory(dirs[i]))
-            getAllheaders(headers, dirs[i]);
+        if(std::filesystem::is_directory(dirs[i]) && find(v,getName(dirs[i])) == -1)
+            getAllheaders(headers, dirs[i],forceUnlink);
     }
     merge_sort(headers);
 }
-void getAllsource(std::vector<std::string>& source, const std::string& path){
+void getAllsource(std::vector<std::string>& source, const std::string& path,
+    const std::string& forceUnlink){
     auto dirs = getDirs(path);
+    auto v = split(forceUnlink);
     for(int i = 1; i < dirs.size(); ++i){
         std::string ext = getExt(dirs[i]);
         if(find(source, dirs[i]) == -1 && (ext == "c" || ext == "cpp"))
                 source.push_back(dirs[i]);
-        if(std::filesystem::is_directory(dirs[i]))
-            getAllsource(source, dirs[i]);
+        if(std::filesystem::is_directory(dirs[i]) && find(v,getName(dirs[i])) == -1)
+            getAllsource(source, dirs[i],forceUnlink);
     }
     merge_sort(source);
 }

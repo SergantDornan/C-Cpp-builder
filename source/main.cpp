@@ -242,8 +242,8 @@ int main(int argc, char* argv[]){
 		return 0;
 	}
 	std::vector<std::string> allHeaders, allSource;
-	getAllheaders(allHeaders,cd);
-	getAllsource(allSource,cd);
+	getAllheaders(allHeaders,cd,parameters[4]);
+	getAllsource(allSource,cd,parameters[4]);
 	if(parameters[6] != "-1"){
 		auto AddInc = split(parameters[6]);
 		for(int i = 0; i < AddInc.size(); ++i){
@@ -254,8 +254,8 @@ int main(int argc, char* argv[]){
             	std::cout << "if it does write full path to this folder" << std::endl;
             	return -1;
         	} 
-			getAllheaders(allHeaders, AddInc[i]);
-			getAllsource(allSource, AddInc[i]);
+			getAllheaders(allHeaders, AddInc[i],parameters[4]);
+			getAllsource(allSource, AddInc[i],parameters[4]);
 		}
 	}
 	std::string sameFiles = CheckSameFiles(allSource);
