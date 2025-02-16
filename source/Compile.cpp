@@ -292,7 +292,7 @@ void compileFile(const std::string& path,
     }
     else{
         std::string cmd = compiler + flags + externCompileFlags + include + depfile[0] + " -c -o " + objFile;
-        int code = system(cmd.c_str());
+        code = system(cmd.c_str());
         if(code == 0){
             cmd = x86Compiler + flags + include + depfile[0] + " -S -o " + asmFile;
             system(cmd.c_str());

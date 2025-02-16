@@ -79,8 +79,7 @@ int main(int argc, char* argv[]){
 	}
 	//bool log = (find(args, "-log") != -1);
 	bool log = true;
-	bool rebuild = ((find(args, "-reb") != -1) || (find(args, "--rebuild") != -1) || 
-		(find(args, "--CC") != -1) || (find(args, "--CXX") != -1));
+	bool rebuild = ((find(args, "-reb") != -1) || (find(args, "--rebuild") != -1));
 	bool run = (find(args, "run") != -1);
 	std::string wd = createEssentials(rebuild);
 	std::string projectConfig = wd + "/" + configFile;
