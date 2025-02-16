@@ -75,6 +75,9 @@ const std::string root = getHomedir() + "/builder";
 int main(int argc, char* argv[]) {
     if(argc >= 2 && std::string(argv[1]) == "reinstall")
         uninstall();
+    bool doMake = true;
+    if(argc > 1 && std::string(argv[1]) == "--no-make")
+        doMake = false;
     if(!checkProgram("gcc")){
         std::cout << "=============== ERROR ===============" << std::endl;
         std::cout << "No gcc found" << std::endl;
@@ -126,8 +129,10 @@ int main(int argc, char* argv[]) {
     bshrc << alias << std::endl;
     bshrc.close();
     system(alias.c_str());
-    cmd = "make -j " + std::to_string(numThreads);
-    system(cmd.c_str());
+    if(doMake){
+        cmd = "make -j " + std::to_string(numThreads);
+        system(cmd.c_str());
+    }
     if(exists(root + "/builder"))
         std::cout << "================= Builder has been installed =================" << std::endl;
     return 0;
