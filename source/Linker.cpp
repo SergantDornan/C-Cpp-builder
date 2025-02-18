@@ -364,7 +364,7 @@ bool link(const std::string& wd,
 		for(int i = 0; i < toLink.size(); ++i)
 			cmd += (toLink[i] + " ");
 		cmd += (flags + " ");
-		cmd += (" -o " + cd + "/" + parameters[1]);
+		cmd += (" -o " + parameters[1]);
 		system(cmd.c_str());
 	}
 	else if(linkType == 1){

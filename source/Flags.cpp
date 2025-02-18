@@ -31,6 +31,8 @@ std::vector<std::string> getParameters(const std::vector<std::string>& args,
 	getNameAfterFlag(args, "--CXX", compilers[1]);
 	parameters[5] = (compilers[0] + " " + compilers[1]);
 	getNameAfterFlag(args, "-o", parameters[1]);
+	if(getFolder(parameters[1]) == "")
+		parameters[1] = (cd + "/" + parameters[1]);
 	getIdirs(args, parameters[6]);
 	return parameters;
 }
