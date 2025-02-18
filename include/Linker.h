@@ -31,6 +31,6 @@ std::vector<std::string> AllLinkedSource(const std::vector<std::string>&,
 	const std::string&, const bool);
 void OneThreadAsmAnal(const std::string&,asmFile&,const std::vector<std::string>&,
 	std::vector<asmFile>&);
-bool link(const std::string&, const std::vector<std::string>&,
+std::string link(const std::string&, const std::vector<std::string>&,
 	const std::vector<std::string>&,const std::vector<std::string>&,
 	const bool, const int, const bool);

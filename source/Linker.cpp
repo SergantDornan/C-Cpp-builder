@@ -243,15 +243,15 @@ void getAllLibs(std::vector<std::string>& libDirs,
 		}
 	}
 }
-bool link(const std::string& wd, 
+std::string link(const std::string& wd, 
 	const std::vector<std::string>& parameters,
 	const std::vector<std::string>& includes, 
 	const std::vector<std::string>& toCompile,
 	const bool log, const int linkType, const bool relink){
 
 
-	if(toCompile.size() == 0 && exists(cd + "/" + parameters[1]))
-		return true;
+	if(toCompile.size() == 0 && exists(parameters[1]))
+		return "nothing to link";
 	std::string flags = " ";
 	std::vector<std::string> libDirs;
 	if(parameters[2] != "-1"){
@@ -267,7 +267,7 @@ bool link(const std::string& wd,
 	}
 	std::vector<std::string> toLink = toLinkList(parameters,wd);
 	if(toLink.size() == 0)
-		return false;
+		return "nothing to link";
 	std::vector<std::string> fLink, fUnlink;
 	if(parameters[3] != "-1")
 		fLink = split(parameters[3]);
@@ -293,7 +293,7 @@ bool link(const std::string& wd,
 				std::cout << "======================== ERROR ========================" << std::endl;
 				std::cout << "Cannot find file: " << fLink[i] << ".(c/cpp)" << std::endl;
 				std::cout << "You specified it as a file for forced linking" << std::endl;
-				return false;
+				return "error";
 			}
 		}
 	}
@@ -309,17 +309,17 @@ bool link(const std::string& wd,
 		if(linking)
 			break;
 	}
-	if(!exists(cd + "/" + parameters[1]))
+	if(!exists(parameters[1]))
 		linking = true;
 	if(toLink.size() == 0)
 		linking = false;
 	if(relink)
 		linking = true;
 	if(!linking)
-		return true;
+		return "nothing to link";
 
-	if(exists(cd + "/" + parameters[1])){
-		std::string cmd = "rm " + cd + "/" + parameters[1];
+	if(exists(parameters[1])){
+		std::string cmd = "rm " + parameters[1];
 		system(cmd.c_str());
 	}
 	if(log){
@@ -368,7 +368,7 @@ bool link(const std::string& wd,
 		system(cmd.c_str());
 	}
 	else if(linkType == 1){
-		std::string cmd = "ar rc " + cd + "/" + parameters[1] + " ";
+		std::string cmd = "ar rc " + parameters[1] + " ";
 		for(int i = 0; i < toLink.size(); ++i)
 			cmd += (toLink[i] + " ");
 		system(cmd.c_str());
@@ -379,5 +379,5 @@ bool link(const std::string& wd,
 			cmd += (":" + libDirs[i]);
 		system(cmd.c_str());
 	}
-	return true;
+	return "succes";
 }

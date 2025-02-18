@@ -268,20 +268,23 @@ int main(int argc, char* argv[]){
 	std::vector<std::string> includes;
 	getIncludes(includes,allHeaders,allSource,parameters[0],true);
 	int linkType = 0;
-	if(parameters[1].size() > 5){
-		std::string prefix(parameters[1].begin(), parameters[1].begin() + 3);
-		if(prefix == "lib" && getExt(parameters[1]) == "a")
+	if(getName(parameters[1]).size() > 5){
+		std::string name = getName(parameters[1]);
+		std::string prefix(name.begin(), name.begin() + 3);
+		if(prefix == "lib" && getExt(name) == "a")
 			linkType = 1;
 	}
 	bool changeSet = createDepfiles(wd, allHeaders, allSource, log);
 	std::vector<std::string> toCompile = compile(wd,parameters,allHeaders,allSource,changeSet, log);
-	bool linked = link(wd, parameters, includes, toCompile, log, linkType, relink);
-	if(linked && exists(cd + "/" + parameters[1]))
+	std::string linkmsg = link(wd, parameters, includes, toCompile, log, linkType, relink);
+	if(linkmsg == "succes" && exists(parameters[1]))
 		std::cout << "============================ SUCCES ============================" << std::endl;
-    if(run && exists(cd + "/" + parameters[1])){
+    else if(linkmsg == "nothing to link" && exists(parameters[1]))
+    	std::cout << "belder: nothing to link";
+    if(run && exists(parameters[1])){
 		//if(run && !onefile){
 		if(linkType == 0){
-			std::string cmd = cd + "/" + parameters[1];
+			std::string cmd = parameters[1];
 			system(cmd.c_str());
 		}
 		else{
@@ -289,5 +292,8 @@ int main(int argc, char* argv[]){
 			std::cout << "Cannot run a library" << std::endl;
 		}
 	}
-    return 0;
+	if(linkmsg == "nothing to link")
+    	return 10;
+    else
+    	return 0;
 }
