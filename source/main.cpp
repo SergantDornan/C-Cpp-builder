@@ -280,7 +280,7 @@ int main(int argc, char* argv[]){
 	if(linkmsg == "succes" && exists(parameters[1]))
 		std::cout << "============================ SUCCES ============================" << std::endl;
     else if(linkmsg == "nothing to link" && exists(parameters[1]))
-    	std::cout << "belder: nothing to link";
+    	std::cout << "belder: nothing to link" << std::endl;
     if(run && exists(parameters[1])){
 		//if(run && !onefile){
 		if(linkType == 0){
