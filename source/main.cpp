@@ -4,6 +4,7 @@
 #include "Linker.h"
 #include "mainFuncs.h"
 #include "Flags.h"
+#include "uninstall.h"
 // -log (Выводить все действия)
 // --rebuild -reb (Удалить папку проекта, потом восстановить)
 // -o
