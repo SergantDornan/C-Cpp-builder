@@ -1,4 +1,4 @@
-OUTPUT=/home/sergantdornan/builder/builder
+OUTPUT=aboba,a..///
 INCDIR=./include
 SOURCEDIR=./source
 deps=./depsAndObjects

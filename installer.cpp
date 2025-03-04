@@ -107,10 +107,6 @@ int main(int argc, char* argv[]) {
     std::string cmd = "mkdir " + root;
     system(cmd.c_str());
     std::ifstream makefile("./Makefile");
-    if(!makefile.is_open()){
-        std::cout << "ERROR: cannot open Makefile" << std::endl;
-        return -1;
-    }
     std::vector<std::string> lines;
     std::string line;
     std::getline(makefile,line);
