@@ -4,7 +4,7 @@ make install #install builder
 ```
 
 ```
-./install reinstall # reinstall builder 
+./installer reinstall # reinstall builder 
 ```
 
 ```
