@@ -26,7 +26,7 @@ $(OUTPUT):$(OBJECTS)
 	$(CPPC) $^ -o $@
 
 mrproper:
-	rm -rf $(OBJECTS) $(DEPFILES)
+	rm -rf $(OBJECTS) $(DEPFILES) $(INSTALLOBJECTS)
 
 $(deps)/%.o:$(SOURCEDIR)/%.cpp
 	$(CPPC) $(CFLAGS) $(foreach D,$(INCDIR),-I$(D)) -c $< -o $@
