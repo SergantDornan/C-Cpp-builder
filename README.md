@@ -17,7 +17,11 @@ to launch builder type "belder"
 
 to specify starting file type the file name right after "belder", in other case builder will look for main.cpp or main.c
 
-builder only works with files with .h, .hpp, .c, .cpp extensions, the builder does not see files with other extensions
+builder only works with files with .h, .hpp, .c, .cpp, .s, .S, .asm extensions, the builder does not see files with other extensions
+
+**WARNING**
+The belder does not work if your assembly files contain not C-style comments 
+
 ```
 belder file.cpp  # starting file - file.cpp
 belder #builder will look for main.cpp or main.c
@@ -74,8 +78,16 @@ belder config --CC default # use standart gcc for C language
 belder config --CXX default # use standart g++ for C++ language
 ```
 
+--preproc [preprocessor] Specify preprocessor
+
 -I[path] additionally, specify the directory in which to search for headers and source files. This flag is required only for directories located outside the project directory. The specified directory will be treated in the same way as the main project directory, builder will find all headers and source files inside all subdirectories of the specified directory. You must specify the full path to the new directory
 
 --no-include [folder] remove folder added by the -I flag from config file
+
+--compile-flags [some flags] Compilation will occur with these flags, but not linking
+
+--link-flags [some flags]  Linking will occur with these flags, but not compilation
+
+--clear-flags Delete all flags from config file
 
 Any flag not specified above will be considered as a flag to the compiler

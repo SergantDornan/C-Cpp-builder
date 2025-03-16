@@ -28,11 +28,13 @@
 // force unlink list
 // compilers
 // additional -I list
+// C standart
+// optimization
+// debug
+// Flags to compiler
+// Flags to linker
+// generalFlags
 
-
-const std::vector<std::string> possibleFlags = {"--rebuild", "-reb", 
-	"-o", "--no-link-force", "--link-force", "--default-link",
-	"--no-link-lib", "--CC", "--CXX"};
 int main(int argc, char* argv[]){
 	if(cd.find(' ') != std::string::npos || 
 		cd.find('(') != std::string::npos ||
@@ -50,36 +52,7 @@ int main(int argc, char* argv[]){
 		uninstall();
 		return 0;
 	}
-	bool getFlags = false;
-	for(int i = 0; i < args.size(); ++i){
-		if(args[i] == "//" || args[i] == "///")
-			getFlags = !getFlags;
-		else if(isFlag(args[i]) && find(possibleFlags, args[i]) == -1 &&
-			args[i][1] != 'I' && args[i][1] != 'l' && !getFlags)
-			otherFlags += (args[i] + " ");
-	}
-	for(int i = 0; i < args.size(); ++i){
-		if(args[i] == "//" && !getFlags)
-			getFlags = true;
-		else if(args[i] == "//" && getFlags){
-			getFlags = false;
-			break;
-		}
-		else if(getFlags && args[i] != "//")
-			externCompileFlags += (args[i] + " ");
-	}
-	for(int i = 0; i < args.size(); ++i){
-		if(args[i] == "///" && !getFlags)
-			getFlags = true;
-		else if(args[i] == "///" && getFlags){
-			getFlags = false;
-			break;
-		}
-		else if(getFlags && args[i] != "///")
-			externLinkFlags += (args[i] + " ");
-	}
-	//bool log = (find(args, "-log") != -1);
-	bool log = true;
+	bool log = (find(args, "-log") != -1);
 	bool rebuild = ((find(args, "-reb") != -1) || (find(args, "--rebuild") != -1));
 	bool run = (find(args, "run") != -1);
 	std::string wd = createEssentials(rebuild);
@@ -104,7 +77,7 @@ int main(int argc, char* argv[]){
 					std::cout << "no file name after --no-link-force flag" << std::endl;
 					return -1;
 				}
-				newfUnlink.push_back(args[i+1]);
+				newfUnlink.push_back(getName(args[i+1]));
 			}
 			if(args[i] == "--link-force"){
 				if((i + 1) >= args.size() || ((i + 1) <  args.size() &&
@@ -113,7 +86,7 @@ int main(int argc, char* argv[]){
 					std::cout << "no file name after --link-force flag" << std::endl;
 					return -1;
 				}
-				newfLink.push_back(args[i+1]);
+				newfLink.push_back(getName(args[i+1]));
 			}
 			if(args[i] == "--default-link"){
 				if((i + 1) >= args.size() || ((i + 1) <  args.size() &&
@@ -122,7 +95,7 @@ int main(int argc, char* argv[]){
 					std::cout << "no file name after --default-link flag" << std::endl;
 					return -1;
 				}
-				defLink.push_back(args[i+1]);
+				defLink.push_back(getName(args[i+1]));
 			}
 		}
 		auto it1 = fLink.begin();
@@ -227,10 +200,32 @@ int main(int argc, char* argv[]){
 			std::cout << "Force linking files: " << parameters[3] << std::endl;
 		if(parameters[4] != "-1")
 			std::cout << "Force unlinking files: " << parameters[4] << std::endl;
-		if(parameters[5] != "default default")
-			std::cout << "Compilers for C and C++ : " << parameters[5] << std::endl;
-		if(parameters[6] != "-1")
-			std::cout << "Additional directories: " << parameters[6] << std::endl;
+		if(parameters[5] != "default default default"){
+			auto v = split(parameters[5]);
+			std::cout << "C compiler:	" << v[0] << std::endl;
+			std::cout << "CPP compiler:	" << v[1] << std::endl;
+			std::cout << "Preprocessor:	" << v[2] << std::endl; 
+		}
+		if(parameters[6] != "-1"){
+			auto v = split(parameters[6]);
+			std::cout << "Additional directories: " << std::endl;
+			for(int i = 0; i < v.size(); ++i)
+				std::cout << "\t" << v[i] << std::endl;
+		}
+		if(parameters[7] != "-1")
+			std::cout << "Standart: " << parameters[7] << std::endl;
+		if(parameters[8] != "-1")
+			std::cout << "Opt: " << parameters[8] << std::endl;
+		if(parameters[9] != "-1")
+			std::cout << "Debug: " << parameters[9] << std::endl;
+		if(parameters[10] != "-1"){
+			std::cout << "Compile flags: " << std::endl;
+			std::cout << "\t" << parameters[10] << std::endl;
+		}
+		if(parameters[11] != "-1"){
+			std::cout << "Link flags: " << std::endl;
+			std::cout << "\t" << parameters[11] << std::endl;
+		}
 		return 0;
 	}
 	std::ofstream out(projectConfig);

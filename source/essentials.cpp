@@ -66,9 +66,12 @@ std::string createEssentials(const bool reb){
 		}
 	}
 	if(isDir && reb){
-		std::string cmd = "rm -rf " + root + "/" + index;
-		system(cmd.c_str());
-		cmd = "mkdir " + root + "/" + index;
+		std::string cmd = "rm -rf ";
+		auto dirs = getDirs(root + "/" + index);
+		for(int i = 1; i < dirs.size(); ++i){
+			if(getName(dirs[i]) != "config")
+				cmd += (dirs[i] + " ");
+		}
 		system(cmd.c_str());
 	}
 	else if(!isDir){
@@ -102,17 +105,25 @@ std::string createEssentials(const bool reb){
 			std::string cmd = "mkdir " + folder + "/" + reqFolders[i];
 			system(cmd.c_str());
 		}
-		std::string cmd = "touch " + folder + "/" + configFile;
-		std::ofstream out(folder + "/" + configFile);
-		out << "-1" << std::endl;
-		out << "out" << std::endl;
-		out << "-1" << std::endl;
-		out << "-1" << std::endl;
-		out << "-1" << std::endl;
-		out << "default default" << std::endl;
-		out << "-1" << std::endl;
-		out.close();
-		system(cmd.c_str());
+		if(!exists(folder + "/" + configFile)){
+			std::string cmd = "touch " + folder + "/" + configFile;
+			system(cmd.c_str());
+			std::ofstream out(folder + "/" + configFile);
+			out << "-1" << std::endl;
+			out << "out" << std::endl;
+			out << "-1" << std::endl;
+			out << "-1" << std::endl;
+			out << "-1" << std::endl;
+			out << "default default default" << std::endl;
+			out << "-1" << std::endl;
+			out << "-1" << std::endl;
+			out << "-1" << std::endl;
+			out << "-1" << std::endl;
+			out << "-1" << std::endl;
+			out << "-1" << std::endl;
+			out << "-1" << std::endl;
+			out.close();
+		}
 	}
 	for(int i = 0; i < reqFolders.size(); ++i){
 		std::string subFolder = folder + "/" + reqFolders[i];

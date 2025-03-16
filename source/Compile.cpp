@@ -1,6 +1,4 @@
 #include "Compile.h"
-std::string otherFlags = "-w ";
-std::string externCompileFlags = " ";
 bool checkProgram(const std::string& programName) {
     std::string command = "which " + programName + " > /dev/null 2>&1";
     int result = system(command.c_str());
@@ -159,10 +157,6 @@ std::vector<std::string> compile(const std::string& wd,const std::vector<std::st
         }
     }
 
-
-
-
-
     int m = (toCompile.size() / numThreads) + 1;
     //int m = (toCompile.size()) + 1;
     std::vector<std::thread> threads;
@@ -216,8 +210,6 @@ void UpdateDependencies(const std::string& bd, const std::string& id,
 void updateFile(std::vector<std::string>& toCompile,
     const std::string& path,std::vector<std::string>& recCheck){
 
-
-    
     recCheck.push_back(getName(path));
     std::ifstream file(path);
     if(!file.is_open())
@@ -242,66 +234,86 @@ void compileFile(const std::string& path,
     const std::vector<std::string>& incDirs,const std::string& bd, const bool log,
     const std::vector<std::string>& parameters){
 
-    if(log) std::cout << "Compiling " << getName(path) << std::endl;
+    if(!log) std::cout << "Compiling " << getName(path) << std::endl;
     std::vector<std::string> depfile;
     std::string line;
     std::ifstream in(path);
     while(std::getline(in,line)) depfile.push_back(line);
-    std::string compiler, flags,x86Compiler;
+    std::string compiler;
     int code = -1;
-    std::string name = getNameNoExt(path);
+    std::string name = getName(path);
     std::string asmFile = bd + "/" + subFolders[1] + "/" + name + ".asm";
     std::string objFile = bd + "/" + subFolders[2] + "/" + name + ".o";
     std::string include = "";
     for(int i = 0; i < incDirs.size(); ++i)
         include += std::string("-I" + incDirs[i] + " ");
-    flags = "";
-    flags += (opt + " ");
-    flags += (debug + " ");
-    flags += (otherFlags + " ");
-    std::vector<std::string> compilers = split(parameters[5]);
-    bool defaultCompiler = true;
-    if(getExt(path) == "cpp"){
-        if(compilers[1] == "default") {
+    std::vector<std::string> compilers = split(parameters[5]); 
+    std::string ext = getExt(path);
+    if(ext == "cpp"){
+        if(compilers[1] == "default")
             compiler = "g++ ";
-            flags += (Cppstandart + " ");
-        }
-        else{
+        else
             compiler = (compilers[1] + " ");
-            x86Compiler = "g++ ";
-            defaultCompiler = false;
-        }
-       
     }
     else{
-        if(compilers[0] == "default"){
+        if(compilers[0] == "default")
             compiler = "gcc ";
-            flags += (Cstandart + " ");
-        }
-        else{
+        else
             compiler = (compilers[0] + " ");
-            x86Compiler = "gcc ";
-            defaultCompiler = false;
-        }
-        
     }
-    if(defaultCompiler){
-        std::string as = "as ";
-        std::string cmd = compiler + flags + include + depfile[0] + " -S -o " + asmFile;
+
+    // Компиляция в ассемблер для последующего парсинга
+    std::string cmd = "";
+    if(ext != "cpp" && ext != "c"){
+        if(compilers[2] == "default")
+            cmd = "cpp ";
+        else
+            cmd = (compilers[2] + " ");
+        if(exists(asmFile)){
+            std::string rmcmd = "rm " + asmFile;
+            system(rmcmd.c_str());
+        }
+        cmd += ("-P " + depfile[0] + " >> " + asmFile);
+        if(log){
+            std::cout << cmd << std::endl;
+            std::cout << std::endl;
+        }
         code = system(cmd.c_str());
-        if(code == 0){
-            cmd = as + asmFile + " -o " + objFile;
-            system(cmd.c_str());
-        }       
     }
     else{
-        std::string cmd = compiler + flags + externCompileFlags + include + depfile[0] + " -c -o " + objFile;
-        code = system(cmd.c_str());
-        if(code == 0){
-            cmd = x86Compiler + flags + include + depfile[0] + " -S -o " + asmFile;
-            system(cmd.c_str());
+        cmd = compiler;
+        for(int i = 7; i <= 10; ++i){
+            if(parameters[i] != "-1")
+                cmd += (parameters[i] + " "); 
         }
+        if(parameters[12] != "-1")
+            cmd += (parameters[12] + " ");
+        cmd += (include + depfile[0] + " -S -o " + asmFile);
+        if(log){
+            std::cout << cmd << std::endl;
+            std::cout << std::endl;
+        }
+        code = system(cmd.c_str());
     }
+
+    // Если компиляция в ассемблер прошла хорошо - компиляция в объектник
+    if(code == 0){
+        cmd = compiler + "-x assembler-with-cpp ";
+        for(int i = 7; i <= 10; ++i){
+            if(parameters[i] != "-1")
+                cmd += (parameters[i] + " "); 
+        }
+        if(parameters[12] != "-1")
+            cmd += (parameters[12] + " ");
+        cmd += (asmFile + " -c -o " + objFile);
+        if(log){
+            std::cout << cmd << std::endl;
+            std::cout << std::endl;
+        }
+        code = system(cmd.c_str());
+    }      
+
+    // Обновление depFile
     std::ofstream out(path);
     out << depfile[0] << std::endl;
     if(code == 0) out << getChangeTime(depfile[0]) << std::endl;
