@@ -24,8 +24,6 @@ std::vector<std::string> toLinkList(const std::vector<std::string>& parameters,
     OneThreadAsmAnal(parameters[0],mainAsm,multiLink[0],filesInfo);
 
     //
-
-
     
     // for(int i = 0; i < numT && i*m < allAsm.size(); ++i)
     //     multiLink.push_back(std::vector<std::string>(allAsm.begin() + i*m,
@@ -63,6 +61,7 @@ void OneThreadAsmAnal(const std::string& name,asmFile& mainAsm,
 		if(newfile.name == onlyName)
 			mainAsm = newfile;
 	}
+
 }
 int findLinks(std::vector<std::string>& toLink, const std::vector<asmFile>& filesInfo,
 	const asmFile& file, const std::vector<std::string>& fUnlink, 
