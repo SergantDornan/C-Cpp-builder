@@ -1,4 +1,4 @@
-OUTPUT=/home/sergantdornan/builder/builder
+OUTPUT=
 INSTALLOUTPUT=./installer
 INCDIR=./include
 SOURCEDIR=./source

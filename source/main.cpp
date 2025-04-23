@@ -16,8 +16,8 @@
 // --no-link-lib
 // status - show config
 // -I<path> + include folder
-// /// <externLinkFlags> ///
-// // <externCompileFlags> //
+// --link-flags
+// --compile-flags
 
 
 // Структура project config:

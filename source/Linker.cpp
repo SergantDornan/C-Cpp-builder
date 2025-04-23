@@ -19,17 +19,25 @@ std::vector<std::string> toLinkList(const std::vector<std::string>& parameters,
 	int m = (allAsm.size() / numT) + 1;
     std::vector<std::thread> threads;
     std::vector<std::vector<std::string>> multiLink;
-    for(int i = 0; i < numT && i*m < allAsm.size(); ++i)
-        multiLink.push_back(std::vector<std::string>(allAsm.begin() + i*m,
-         allAsm.begin() + (((i+1)*m < allAsm.size()) ? (i+1)*m : allAsm.size())));
-    for (int i = 0; i < multiLink.size(); ++i)
-        threads.push_back(std::thread(OneThreadAsmAnal,
-        	std::ref(parameters[0]),std::ref(mainAsm),
-        	std::ref(multiLink[i]),std::ref(filesInfo)));
-    for (auto& thread : threads) {
-        if (thread.joinable())
-            thread.join(); 
-    }
+    //
+    multiLink.push_back(std::vector<std::string>(allAsm.begin(), allAsm.end()));
+    OneThreadAsmAnal(parameters[0],mainAsm,multiLink[0],filesInfo);
+
+    //
+
+
+    
+    // for(int i = 0; i < numT && i*m < allAsm.size(); ++i)
+    //     multiLink.push_back(std::vector<std::string>(allAsm.begin() + i*m,
+    //      allAsm.begin() + (((i+1)*m < allAsm.size()) ? (i+1)*m : allAsm.size())));
+    // for (int i = 0; i < multiLink.size(); ++i)
+    //     threads.push_back(std::thread(OneThreadAsmAnal,
+    //     	std::ref(parameters[0]),std::ref(mainAsm),
+    //     	std::ref(multiLink[i]),std::ref(filesInfo)));
+    // for (auto& thread : threads) {
+    //     if (thread.joinable())
+    //         thread.join(); 
+    // }
     std::vector<std::string> fUnlink;
     if(parameters[4] != "-1")
     	fUnlink = split(parameters[4]);

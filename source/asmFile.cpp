@@ -52,44 +52,38 @@ std::string getAlias(const std::string& line){
 std::string getVarCallName(const std::string& line){
 	if(line.find("(%rip)") == std::string::npos)
 		return "-1";
-	auto v = split(line, "\t ");
-	if(v.size() == 2 && v[1].find("(%rip)") != std::string::npos)
-		return std::string(v[1].begin(), v[1].end() - 6);
-	for(int i = 0; i < v.size(); ++i){
-		if(v[i].find("(%rip)") != std::string::npos){
-			if(i == v.size() - 1)
-				return std::string(v[1].begin(), v[1].end() - 6);
-			else
-				return std::string(v[0].begin(), v[0].end() - 7);
-		}
+	auto v = split(split(line, "\t")[1]);
+	if(v.size() == 1 && v[0].find("(%rip)") != std::string::npos)
+		return std::string(v[0].begin(), v[0].end() - 6);
+	if(v.size() == 2){
+		if(v[0].find("(%rip)") != std::string::npos)
+			return std::string(v[0].begin(), v[0].end() - 7);
+		else
+			return std::string(v[1].begin(), v[1].end() - 6);
 	}
 	return "SOME ERROR";
 }
 std::string getVarDefName(const std::string& line){
 	if(line.find("@object") == std::string::npos)
 		return "-1";
-	auto s = split(line, "\t ");
-	return std::string(s[1].begin(),s[1].end()-1);
+	auto s = split(split(line, "\t")[1]);
+	return std::string(s[0].begin(),s[0].end()-1);
 }
 std::string getCallName(const std::string& line){
-	if(line.find("call\t") == std::string::npos && 
-		line.find("jmp\t") == std::string::npos && 
-		line.find("j\t") == std::string::npos &&
-		line.find("call ") == std::string::npos && 
-		line.find("jmp ") == std::string::npos && 
-		line.find("j ") == std::string::npos)
+	if(line.find("call") == std::string::npos && 
+		line.find("jmp") == std::string::npos &&
+		line.find("j") == std::string::npos)
 		return "-1";
-	auto s = split(line, "\t ");
+	auto s = split(line, "\t");
 	if(s.size() != 2)
 		return "-1";
 	if(s[1].find("@PLT") == std::string::npos)
-		return std::string(s[1].begin(), s[1].end());
-	else
-		return std::string(s[1].begin(), s[1].end()-4);
+		return "-1";
+	return std::string(s[1].begin(), s[1].end()-4);
 }
 std::string getDefName(const std::string& line){
 	if(line.find("@function") == std::string::npos)
 		return "-1";
-	auto s = split(line, "\t ");
-	return std::string(s[1].begin(),s[1].end()-1);
+	auto s = split(split(line, "\t")[1]);
+	return std::string(s[0].begin(),s[0].end()-1);
 }
