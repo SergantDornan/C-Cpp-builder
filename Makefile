@@ -16,6 +16,9 @@ INSTALLOBJECTS= $(deps)/installer.o $(deps)/alias.o $(deps)/BuilderFilework.o $(
 
 all:$(OUTPUT)
 
+pocket:$(INSTALLOUTPUT)
+	@./installer pocket
+
 install:$(INSTALLOUTPUT)
 	@./installer
 
@@ -26,7 +29,7 @@ $(OUTPUT):$(OBJECTS)
 	$(CPPC) $^ -o $@
 
 mrproper:
-	rm -rf $(OBJECTS) $(DEPFILES) $(INSTALLOBJECTS) $(INSTALLOUTPUT)
+	rm -rf $(OBJECTS) $(DEPFILES) $(INSTALLOBJECTS) $(INSTALLOUTPUT) ./pocketbuilder
 
 $(deps)/%.o:$(SOURCEDIR)/%.cpp
 	$(CPPC) $(CFLAGS) $(foreach D,$(INCDIR),-I$(D)) -c $< -o $@

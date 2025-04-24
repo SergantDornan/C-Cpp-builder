@@ -1,4 +1,30 @@
 #include "essentials.h"
+void removeBuildFolder(){
+	std::string configPath = root + "/" + configFile;
+	std::ifstream config(configPath);
+	std::string line;
+	std::vector<std::string> lines;
+	while(std::getline(config, line))
+		lines.push_back(line);
+	config.close();
+	auto it = lines.begin();
+	while(it != lines.end()){
+		if(split(*it, "*")[0] == cd){
+			std::string cmd = "rm -rf " + root + "/" + split(*it, "*")[1];
+			system(cmd.c_str());
+			std::cout << root << "/" << split(*it, "*")[1] << " has been removed" << std::endl; 
+			lines.erase(it);
+			std::ofstream f(configPath);
+			for(int i = 0; i < lines.size(); ++i)
+				f << lines[i] << std::endl;
+			f.close();
+			break;
+		}
+		else
+			it++;
+	}
+}
+
 std::string createEssentials(const bool reb){
 	auto mainDirs = getDirs(root);
 	bool isConfig = false;

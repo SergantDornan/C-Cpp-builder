@@ -4,11 +4,15 @@ make install #install builder
 ```
 
 ```
-./installer reinstall # reinstall builder 
+make pocket # build pocketbuilder
 ```
 
 ```
 belder uninstall #uninstall builder
+```
+
+```
+belder reinstall #reinstall builder
 ```
 # builder
 you can launch builder from any folder
@@ -20,7 +24,8 @@ to specify starting file type the file name right after "belder", in other case 
 builder only works with files with .h, .hpp, .c, .cpp, .s, .S, .asm extensions, the builder does not see files with other extensions
 
 **WARNING**
-The belder does not work if your assembly files contain not C-style comments 
+The belder does not work if your assembly files contain not C-style comments
+
 
 ```
 belder file.cpp  # starting file - file.cpp
@@ -40,6 +45,12 @@ Type "belder status" to see all the current settings for a project
 ```
 belder status # will type all current settings
 ```
+Type "clean" or "mrproper" to remove folder with assembly, object and dep files for your project
+```
+belder clean
+belder mrproper
+```
+
 To uninstall builder simply type
 ```
 belder uninstall
@@ -52,6 +63,19 @@ Builder cannot make other libraries
 ```
 belder start.cpp -o libMylib.a # will create a static library
 ```
+
+# Pocketbuilder
+
+If you install pocketbuilder with command
+
+```
+make pocket
+```
+
+Then you will get a binary file "pocketbuilder". You can copy this binary file to any folder. Run this file from this folder to build the project located in this folder. Pocketbuilder will create a "builder" folder containing assembler files, object files, and dependency files inside the project, rather than in the home folder.
+
+
+
 # flags
 -log showing log information while building
 

@@ -11,6 +11,7 @@
 #include <sstream>
 extern const std::vector<std::string> reqFolders, subFolders;
 extern const std::string root, cd, configFile;
+extern const bool pocket;
 std::string cwd();
 std::string getExt(const std::string&);
 std::string getName(const std::string&);

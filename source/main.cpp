@@ -6,6 +6,9 @@
 #include "Flags.h"
 #include "uninstall.h"
 #include "StatusCheck.h"
+
+// Следующая строка заполняется инсталлятором, не менять ее
+const std::string SourceCodeFolder;
 // -log (Выводить все действия)
 // --rebuild -reb (Удалить папку проекта, потом восстановить)
 // --relink -rel (Просто перелинковать)
@@ -21,6 +24,7 @@
 // --link-flags
 // --compile-flags
 // --clear-flags
+// clean, mrproper - удалить папку с build
 
 // Структура project config:
 // main input
@@ -38,6 +42,22 @@
 // generalFlags
 
 int main(int argc, char* argv[]){
+	if(pocket && !exists(root)){
+		std::string cmd = "mkdir " + root;
+		system(cmd.c_str());
+	}
+	if(exists(root) && 
+		argc >= 2 && (std::string(argv[1]) == "clean" ||
+			std::string(argv[1]) == "mrproper"))
+	{
+		if(pocket){
+			std::string cmd = "rm -rf " + root;
+			system(cmd.c_str());
+			std::cout << root << " has been removed" << std::endl;
+		}
+		else removeBuildFolder();
+		return 0;
+	}
 	if(cd.find(' ') != std::string::npos || 
 		cd.find('(') != std::string::npos ||
 		cd.find(')') != std::string::npos){
@@ -54,7 +74,26 @@ int main(int argc, char* argv[]){
 		uninstall();
 		return 0;
 	}
-
+	if(args.size() != 0 && args[0] == "reinstall"){
+		if(!exists(SourceCodeFolder)){
+			std::cout << "===================== ERROR =====================" << std::endl;
+			std::cout << "Cannot reinstall, no folder with source code" << std::endl;
+			std::cout << "=================================================" << std::endl;
+			return 0;
+		}
+		if(!pocket) uninstall();
+		std::string cmd;
+		if(!pocket) cmd = "make install -C " + SourceCodeFolder;
+		else cmd = "make pocket -C " + SourceCodeFolder;
+		system(cmd.c_str());
+		if(pocket){
+			cmd = "rm pocketbuilder";
+			system(cmd.c_str());
+			cmd = "cp " + SourceCodeFolder + "/pocketbuilder " + cd;
+			system(cmd.c_str());
+		}
+		return 0;
+	}
 
 	bool log = (find(args, "-log") != -1);
 	bool rebuild = ((find(args, "-reb") != -1) || (find(args, "--rebuild") != -1));

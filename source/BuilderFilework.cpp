@@ -1,19 +1,21 @@
 #include "BuilderFilework.h"
+// Следующая строка заполняется инсталлятором, не менять ее
 const std::string root = getHomedir() + "/builder";
 const std::string cd = cwd();
+const bool pocket = (root == "./builder");
 const std::string configFile = "config";
 const std::vector<std::string> reqFolders = {"headers","source"}; // Если меньше двух имен - будет SegFault
 const std::vector<std::string> subFolders = {"deps", "asm", "objects"}; // Если меньше трех имен - будет SegFault
 std::string cwd(){
-	char cwd0[PATH_MAX];
+    char cwd0[PATH_MAX];
     if (getcwd(cwd0, sizeof(cwd0)) != nullptr) {
-    	return cwd0;
+        return cwd0;
     } 
     else {
-    	std::cout << "==================== ERROR ====================" << std::endl;
-    	std::cout << "====== some error in install.cpp : std::string cwd() ======";
-    	std::cout << std::endl;
-    	return "";
+        std::cout << "==================== ERROR ====================" << std::endl;
+        std::cout << "====== some error in install.cpp : std::string cwd() ======";
+        std::cout << std::endl;
+        return "";
     }
 }
 std::string getName(const std::string& path){
@@ -36,6 +38,8 @@ void getAllheaders(std::vector<std::string>& headers,const std::string& path,
     auto v = split(forceUnlink);
     for(int i = 1; i < dirs.size(); ++i){
         if(find(v, getName(dirs[i])) != -1) continue;
+        if(pocket && (dirs[i] == cd + "/builder") &&
+            std::filesystem::is_directory(dirs[i])) continue;
         if((getExt(dirs[i]) == "h" || getExt(dirs[i]) == "hpp") 
             && find(headers, dirs[i]) == -1)
             headers.push_back(dirs[i]);
@@ -50,6 +54,8 @@ void getAllsource(std::vector<std::string>& source, const std::string& path,
     auto v = split(forceUnlink);
     for(int i = 1; i < dirs.size(); ++i){
         if(find(v, getName(dirs[i])) != -1) continue;
+        if(pocket && (dirs[i] == cd + "/builder") &&
+            std::filesystem::is_directory(dirs[i])) continue;
         std::string ext = getExt(dirs[i]);
         if(find(source, dirs[i]) == -1 && 
             (ext == "c" || ext == "cpp" || ext == "asm" || ext == "s" || ext == "S"))
