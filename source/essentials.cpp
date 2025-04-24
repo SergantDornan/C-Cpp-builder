@@ -98,8 +98,10 @@ std::string createEssentials(const bool reb){
 		rebuild = true;
 	if(rebuild){
 		for(int i = 1; i < inDir.size(); ++i){
-			std::string cmd = "rm -rf " + inDir[i];
-			system(cmd.c_str());
+			if(getName(inDir[i]) != "config"){
+				std::string cmd = "rm -rf " + inDir[i];
+				system(cmd.c_str());
+			}
 		}
 		for(int i = 0; i < reqFolders.size(); ++i){
 			std::string cmd = "mkdir " + folder + "/" + reqFolders[i];

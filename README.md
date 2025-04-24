@@ -55,7 +55,9 @@ belder start.cpp -o libMylib.a # will create a static library
 # flags
 -log showing log information while building
 
---rebuild / -reb rebuilding all configs and recompiling all files in projects
+--rebuild / -reb recompiling all files in project
+
+--relink / -rel relinking all files in project
 
 -o [filename] specify output file name
 

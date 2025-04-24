@@ -21,8 +21,7 @@ public:
 	void add(const std::string&);
 };
 int findLinks(std::vector<std::string>&, const std::vector<asmFile>&,
-	const asmFile&, const std::vector<std::string>&,
-	std::vector<std::pair<std::string,std::string>>&, 
+	const asmFile&,std::vector<std::pair<std::string,std::string>>&, 
 	std::vector<std::pair<std::string,std::string>>&);
 int pairFind(const std::vector<std::pair<std::string,std::string>>&, const std::string&);
 std::vector<std::string> toLinkList(const std::vector<std::string>&,const std::string&);

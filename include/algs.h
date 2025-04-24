@@ -113,5 +113,37 @@ void quickSort(std::vector<T>& v){
     quickSort(v,p,r);
 }
 
+template <class T>
+std::vector<T>& operator += (std::vector<T>& v1, const std::vector<T>& v2){
+    for(int i = 0; i < v2.size(); ++i){
+        if(find(v1, v2[i]) == -1)
+            v1.push_back(v2[i]);
+    }
+    return v1;
+}
+
+template <class T>
+std::vector<T> operator + (const std::vector<T>& v1, const std::vector<T>& v2){
+    std::vector<T> newv = v1;
+    newv += v2;
+    return newv;
+}
+
+template <class T>
+std::vector<T>& operator -= (std::vector<T>& v1, const std::vector<T>& v2){
+    auto it = v1.begin();
+    while(it != v1.end()){
+        if(find(v2,*it) != -1) v1.erase(it);
+        else it++;
+    }
+    return v1;
+}
+
+template <class T>
+std::vector<T> operator - (const std::vector<T>& v1, const std::vector<T>& v2){
+    std::vector<T> newv = v1;
+    newv -= v2;
+    return newv;
+}
 
 #endif //UBERMENSCHENAMOGUS228_ALGS_H

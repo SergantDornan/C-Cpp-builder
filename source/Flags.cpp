@@ -46,6 +46,8 @@ std::vector<std::string> getParameters(std::vector<std::string>& args,
 		else
 			it++;
 	}
+	FindForceLinkFiles(args, parameters);
+	FindLinkLibs(args, parameters);
 	getSpecFlags(args, parameters[10], "--compile-flags");
 	getSpecFlags(args, parameters[11], "--link-flags");
 	getRestFlags(args, parameters[12]);
@@ -180,5 +182,78 @@ void getNameAfterFlag(const std::vector<std::string>& args,
 			return;
 		}
 		s = args[index + 1];
+	}
+}
+void getNamesAfterFlag(std::vector<std::string>& args,
+	const std::string& flag,std::vector<std::string>& s){
+
+	if(args.size() == 0) return;
+	auto it = args.begin();
+	bool get = false;
+	while(it != args.end()){
+		if(*it == flag){
+			get = true;
+			args.erase(it);
+			continue;
+		}
+		if(get && isFlag(*it)) break;
+		if(find(s, *it) == -1 && get) s.push_back(*it);
+		if(get) args.erase(it);
+		else it++;
+	}
+}
+void FindForceLinkFiles(std::vector<std::string>& args,
+	std::vector<std::string>& parameters)
+{
+	std::vector<std::string> fLink, fUnlink, defLink;
+	if(parameters[3] != "-1") fLink = split(parameters[3]);
+	if(parameters[4] != "-1") fUnlink = split(parameters[4]);
+	getNamesAfterFlag(args, "--link-force", fLink);
+	getNamesAfterFlag(args, "--no-link-force", fUnlink);
+	getNamesAfterFlag(args, "--default-link", defLink);
+
+	fLink -= defLink;
+	fLink -= fUnlink;
+
+	fUnlink -= defLink;
+	fUnlink -= fLink;
+
+	if(fLink.size() == 0)
+		parameters[3] = "-1";
+	else{
+		std::string s;
+		for(int i = 0; i < fLink.size(); ++i)
+			s += (fLink[i] + " ");
+		parameters[3] = s;
+	}
+
+	if(fUnlink.size() == 0)
+		parameters[4] = "-1";
+	else{
+		std::string s;
+		for(int i = 0; i < fUnlink.size(); ++i)
+			s += (fUnlink[i] + " ");
+		parameters[4] = s;
+	}
+}
+void FindLinkLibs(std::vector<std::string>& args,
+		std::vector<std::string>& parameters)
+{
+	std::vector<std::string> exLibs, newlibs, defLink;
+	getNamesAfterFlag(args, "--no-link-lib", defLink);
+	if(parameters[2] != "-1") exLibs = split(parameters[2]);
+	for(int i = 0; i < args.size(); ++i){
+		if(args[i].size() > 2 && isFlag(args[i]) && args[i][1] == 'l' && args[i] != "-log")
+			newlibs.push_back(std::string(args[i].begin() + 2, args[i].end()));
+	}
+	exLibs -= defLink;
+	exLibs += newlibs;
+	if(exLibs.size() == 0)
+		parameters[2] = "-1";
+	else{
+		std::string s = "";
+		for(int i = 0; i < exLibs.size(); ++i)
+			s += (exLibs[i] + " ");
+		parameters[2] = s;
 	}
 }
