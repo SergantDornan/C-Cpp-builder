@@ -88,9 +88,9 @@ std::string getCallName(const std::string& line){
 	auto s = split(line, "\t");
 	if(s.size() != 2)
 		return "-1";
-	if(s[1].find("@PLT") == std::string::npos)
-		return "-1";
-	return std::string(s[1].begin(), s[1].end()-4);
+	if(s[1].find("@PLT") != std::string::npos)
+		return std::string(s[1].begin(), s[1].end()-4);
+	return std::string(s[1].begin(), s[1].end());
 }
 std::string getDefName(const std::string& line){
 	if(line.find("@function") == std::string::npos)
