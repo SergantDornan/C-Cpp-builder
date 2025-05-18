@@ -22,13 +22,13 @@ public:
 };
 int findLinks(std::vector<std::string>&, const std::vector<asmFile>&,
 	const asmFile&,std::vector<std::pair<std::string,std::string>>&, 
-	std::vector<std::pair<std::string,std::string>>&);
+	std::vector<std::pair<std::string,std::string>>&, const bool);
 int pairFind(const std::vector<std::pair<std::string,std::string>>&, const std::string&);
-std::vector<std::string> toLinkList(const std::vector<std::string>&,const std::string&);
+std::vector<std::string> toLinkList(const std::vector<std::string>&,const std::string&, const bool);
 std::vector<std::string> AllLinkedSource(const std::vector<std::string>&,
 	const std::string&, const bool);
 void OneThreadAsmAnal(const std::string&,asmFile&,const std::vector<std::string>&,
 	std::vector<asmFile>&);
 std::string link(const std::string&, const std::vector<std::string>&,
 	const std::vector<std::string>&,const std::vector<std::string>&,
-	const bool, const int, const bool);
+	const bool, const int, const bool, const bool);

@@ -7,7 +7,7 @@ int pairFind(const std::vector<std::pair<std::string,std::string>>& v, const std
 	return -1;
 }
 std::vector<std::string> toLinkList(const std::vector<std::string>& parameters,
-	const std::string& wd){
+	const std::string& wd,const bool idgaf){
 
 	std::string asmFolder = wd + "/" + reqFolders[1] + "/" + subFolders[1];
 	auto allAsm = getDirs(asmFolder);
@@ -42,7 +42,7 @@ std::vector<std::string> toLinkList(const std::vector<std::string>& parameters,
 	std::vector<std::pair<std::string,std::string>> funcs,vars;
 	std::vector<std::string> fLink, fUnlink;
 	if(parameters[3] != "-1") fLink = split(parameters[3]);
-	int code = findLinks(toLink, filesInfo, mainAsm, funcs, vars);
+	int code = findLinks(toLink, filesInfo, mainAsm, funcs, vars,idgaf);
 	for(int i = 0; i < fLink.size(); ++i){
 		bool b = true;
 		asmFile file("???");
@@ -59,7 +59,7 @@ std::vector<std::string> toLinkList(const std::vector<std::string>& parameters,
 			std::cout << "===================================================" << std::endl;
 			return std::vector<std::string>{};
 		}
-		code |= findLinks(toLink, filesInfo, file, funcs, vars);
+		code |= findLinks(toLink, filesInfo, file, funcs, vars,idgaf);
 	}
 	if(parameters[4] != "-1") fUnlink = split(parameters[4]);
 	toLink -= fUnlink;
@@ -87,13 +87,13 @@ void OneThreadAsmAnal(const std::string& name,asmFile& mainAsm,
 }
 int findLinks(std::vector<std::string>& toLink, const std::vector<asmFile>& filesInfo,
 	const asmFile& file,std::vector<std::pair<std::string,std::string>>& funcs,
-	std::vector<std::pair<std::string,std::string>>& vars){
+	std::vector<std::pair<std::string,std::string>>& vars, const bool idgaf){
 
 	for(int i = 0; i < file.callFuncs.size(); ++i){
 		for(int j = 0; j < filesInfo.size(); ++j){
 			if(find(filesInfo[j].defFuncs, file.callFuncs[i]) != -1){
 				if(pairFind(funcs, file.callFuncs[i]) != -1 && 
-					funcs[pairFind(funcs, file.callFuncs[i])].second != filesInfo[j].name)
+					funcs[pairFind(funcs, file.callFuncs[i])].second != filesInfo[j].name && !idgaf)
 				{
 					std::cout << "=================== ERROR ===================" << std::endl;
 					std::cout << "multiple definition of function: " << std::endl;
@@ -103,12 +103,15 @@ int findLinks(std::vector<std::string>& toLink, const std::vector<asmFile>& file
 					std::cout << "Second definition in file: " << filesInfo[j].name << ".asm" << std::endl;
 					std::cout << std::endl;
 					std::cout << "You can choose not to link files forcibly by using the flag: --no-link-force [filename]" << std::endl;
+					std::cout << "Or you can run builder with --idgaf flag to ignore this error" << std::endl;
+					std::cout << std::endl;
+					std::cout << "=============================================" << std::endl;
 					return -1; 
 				}
 				if(find(toLink, filesInfo[j].name) == -1){
 					toLink.push_back(filesInfo[j].name);
 					funcs.push_back(std::pair<std::string,std::string>{file.callFuncs[i],filesInfo[j].name});
-					findLinks(toLink,filesInfo,filesInfo[j],funcs,vars);
+					findLinks(toLink,filesInfo,filesInfo[j],funcs,vars,idgaf);
 				}
 			}
 		}
@@ -117,7 +120,7 @@ int findLinks(std::vector<std::string>& toLink, const std::vector<asmFile>& file
 		for(int j = 0; j < filesInfo.size(); ++j){
 			if(find(filesInfo[j].defVars, file.callVars[i]) != -1){
 				if(pairFind(vars, file.callVars[i]) != -1 &&
-					vars[pairFind(vars,file.callVars[i])].second != filesInfo[j].name){
+					vars[pairFind(vars,file.callVars[i])].second != filesInfo[j].name && !idgaf){
 					std::cout << "=================== ERROR ===================" << std::endl;
 					std::cout << "multiple definition of variable: " << std::endl;
 					std::cout << file.callVars[i] << std::endl;
@@ -126,12 +129,15 @@ int findLinks(std::vector<std::string>& toLink, const std::vector<asmFile>& file
 					std::cout << "Second definition in file: " << filesInfo[j].name << ".asm" << std::endl;
 					std::cout << std::endl;
 					std::cout << "You can choose not to link files forcibly by using the flag: --no-link-force [filename]" << std::endl;
+					std::cout << "Or you can run builder with --idgaf flag to ignore this error" << std::endl;
+					std::cout << std::endl;
+					std::cout << "=============================================" << std::endl;
 					return -1; 
 				}
 				if(find(toLink, filesInfo[j].name) == -1){
 					toLink.push_back(filesInfo[j].name);
 					vars.push_back(std::pair<std::string,std::string>{file.callVars[i], filesInfo[j].name});
-					findLinks(toLink,filesInfo,filesInfo[j],funcs,vars);
+					findLinks(toLink,filesInfo,filesInfo[j],funcs,vars,idgaf);
 				}
 			}
 		}
@@ -165,7 +171,8 @@ std::string link(const std::string& wd,
 	const std::vector<std::string>& parameters,
 	const std::vector<std::string>& includes, 
 	const std::vector<std::string>& toCompile,
-	const bool log, const int linkType, const bool relink){
+	const bool log, const int linkType, const bool relink,
+	const bool idgaf){
 
 	if(toCompile.size() == 0 && exists(parameters[1]) && !relink)
 		return "nothing to link";
@@ -185,7 +192,7 @@ std::string link(const std::string& wd,
 		for(int i = 0; i < libsToLink.size(); ++i)
 			flags += ("-l" + libsToLink[i] + " ");
 	}
-	std::vector<std::string> toLink = toLinkList(parameters,wd);
+	std::vector<std::string> toLink = toLinkList(parameters,wd,idgaf);
 	if(toLink.size() == 0)
 		return "nothing to link";
 	// std::vector<std::string> fLink, fUnlink;

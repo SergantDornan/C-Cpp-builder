@@ -98,7 +98,7 @@ int main(int argc, char* argv[]){
 	bool log = (find(args, "-log") != -1);
 	bool rebuild = ((find(args, "-reb") != -1) || (find(args, "--rebuild") != -1));
 	bool run = (find(args, "run") != -1);
-
+	bool idgaf = (find(args, "--idgaf") != -1);
 	bool relink = (find(args, "--no-link-force") != -1 || find(args, "--link-force") != -1 ||
 		find(args, "--default-link") != -1 || find(args, "--relink") != -1 || find(args, "-rel") != -1);
 	std::string wd = createEssentials(rebuild);
@@ -163,7 +163,8 @@ int main(int argc, char* argv[]){
 	
 	bool changeSet = createDepfiles(wd, allHeaders, allSource, log);
 	std::vector<std::string> toCompile = compile(wd,parameters,allHeaders,allSource,changeSet, log);
-	std::string linkmsg = link(wd, parameters, includes, toCompile, log, linkType, relink);
+	std::string linkmsg = link(wd, parameters, includes, toCompile, 
+		log, linkType, relink, idgaf);
 	
 
 	if(linkmsg == "succes" && exists(parameters[1]))

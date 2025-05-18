@@ -5,7 +5,7 @@
 const std::vector<std::string> possibleFlags = {"--rebuild", "-reb", 
 	"-o", "--no-link-force", "--link-force", "--default-link",
 	"--no-link-lib", "--CC", "--CXX", "--compile-flags", "--link-flags", "--clear-flags",
-	"--preproc", "--relink", "-rel"};
+	"--preproc", "--relink", "-rel", "--idgaf"};
 const std::vector<std::string> switchFlags = {"--compile-flags", "--link-flags"};
 bool isFlag(const std::string&);
 std::string findFile(const std::string&,const std::string&);

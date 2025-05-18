@@ -116,4 +116,6 @@ belder config --CXX default # use standart g++ for C++ language
 
 --clear-flags Delete all flags from config file
 
+--idgaf Ignore multiple definition
+
 Any flag not specified above will be considered as a flag to the compiler
