@@ -79,6 +79,7 @@ void OneThreadAsmAnal(const std::string& name,asmFile& mainAsm,
 		std::ifstream in(dirs[i]);
 		while(std::getline(in, line)) newfile.add(line);
 		in.close();
+		newfile.defFuncs -= newfile.weaks;
 		filesInfo.push_back(newfile);
 		if(newfile.name == onlyName)
 			mainAsm = newfile;

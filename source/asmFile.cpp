@@ -2,6 +2,8 @@
 //	.type	sum, @function
 //	call	mult@PLT
 // 	.type	_ZL1y, @object
+//	.weak	_ZNSt6vectorIiSaIiEED1Ev
+
 asmFile::asmFile(const std::string& line){
 	name = line;
 }
@@ -37,7 +39,7 @@ void asmFile::add(const std::string& line){
 	else if(getDefName(line) != "-1"){
 
 		std::string s = getDefName(line);
-		if(find(defFuncs, s) == -1)
+		if(find(defFuncs, s) == -1 && find(weaks, s) == -1)
 			defFuncs.push_back(s);
 
 	}
@@ -47,6 +49,11 @@ void asmFile::add(const std::string& line){
 		if(find(defFuncs, s) == -1)
 			defFuncs.push_back(s);
 
+	}
+	else if(getWeak(line) != "-1"){
+		std::string s = getWeak(line);
+		if(find(weaks, s) == -1)
+			weaks.push_back(s);
 	}
 	//std::cout << "AAAAAAAAAa" << std::endl;
 }
@@ -97,4 +104,10 @@ std::string getDefName(const std::string& line){
 		return "-1";
 	auto s = split(line, "\t ");
 	return std::string(s[1].begin(),s[1].end()-1);
+}
+std::string getWeak(const std::string& line){
+	if(line.find(".weak") == std::string::npos)
+		return "-1";
+	auto s = split(line, "\t ");
+	return s[1];
 }

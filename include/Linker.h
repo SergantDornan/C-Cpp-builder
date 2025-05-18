@@ -11,13 +11,14 @@ std::string getDefName(const std::string&);
 std::string getVarCallName(const std::string&);
 std::string getVarDefName(const std::string&);
 std::string getAlias(const std::string&);
+std::string getWeak(const std::string&);
 class asmFile{
 public:
 	asmFile(const std::string&);
 	asmFile(const asmFile&);
 	std::string name;
 	std::vector<std::string> callFuncs, defFuncs,
-							callVars, defVars;
+							callVars, defVars, weaks;
 	void add(const std::string&);
 };
 int findLinks(std::vector<std::string>&, const std::vector<asmFile>&,
