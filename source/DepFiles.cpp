@@ -23,9 +23,8 @@ bool createDepfiles(const std::string& wd,
 		std::getline(file, line);
 		if(!exists(line)){
 			changeSet = true;
-			std::string asmFile = wd + "/" + reqFolders[1] + "/" + subFolders[1] + "/" + getName(dirs[i]) + ".asm";
-			std::string objFile = wd + "/" + reqFolders[1] + "/" + subFolders[2] + "/" + getName(dirs[i]) + ".o";
-			std::string cmd = "rm " + dirs[i] + " " + asmFile + " " + objFile;
+			std::string objFile = wd + "/" + reqFolders[1] + "/" + subFolders[1] + "/" + getName(dirs[i]) + ".o";
+			std::string cmd = "rm " + dirs[i] + " " + objFile;
 			system(cmd.c_str());
 		}
 		file.close();

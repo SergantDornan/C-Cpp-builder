@@ -23,6 +23,6 @@ bool isDebug(const std::string&);
 bool isStandart(const std::string&);
 void getNamesAfterFlag(std::vector<std::string>&,const std::string&,
 	std::vector<std::string>&);
-void FindLinkLibs(std::vector<std::string>&,std::vector<std::string>&);
-void FindForceLinkFiles(std::vector<std::string>&,std::vector<std::string>&);
+void FindForceLinkUnlink(std::vector<std::string>&,std::vector<std::string>&);
+bool isLib(const std::string&);
 #endif

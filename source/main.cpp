@@ -7,6 +7,13 @@
 #include "uninstall.h"
 #include "StatusCheck.h"
 
+// ИЗМЕНЕНИЯ В РИДМИ:
+// УКАЗАТЬ ПРО БИБЛИОТЕКИ, ЧТО ОНИ ТОЖЕ ПАРСЯТСЯ, ЧТО У НИХ ТЕПЕРЬ ТЕ ЖЕ ПРАВИЛА
+// И ФЛАГИ, ЧТО И У ФАЙЛОВ (force-link, force-unlink, def-link и тд), ТАКЖЕ СОХРАНЕНО
+// ПРОСТО -laboba, оно попадает в категорию force-link
+// ЕЩЕ ПРО ОПЦИЮ ХЕЛП НАПИСАТЬ
+
+
 // Следующая строка заполняется инсталлятором, не менять ее
 const std::string SourceCodeFolder;
 // -log (Выводить все действия)
@@ -15,16 +22,15 @@ const std::string SourceCodeFolder;
 // -o
 // run
 // uninstall
-// --no-link-force - force unlink file
-// --link-force - force link file
-// --default-link - default link file
-// --no-link-lib
+// --no-link-force - force unlink file (lib)
+// --link-force - force link file (lib)
+// --default-link - default link file (lib)
 // status - show config
 // -I<path> + include folder
 // --link-flags
 // --compile-flags
 // --clear-flags
-// clean, mrproper - удалить папку с build
+// clean, clear, mrproper - удалить папку с build
 
 // Структура project config:
 // main input
@@ -40,6 +46,7 @@ const std::string SourceCodeFolder;
 // Flags to compiler
 // Flags to linker
 // generalFlags
+// force unlink libs
 
 int main(int argc, char* argv[]){
 	if(pocket && !exists(root)){
@@ -47,7 +54,7 @@ int main(int argc, char* argv[]){
 		system(cmd.c_str());
 	}
 	if(exists(root) && 
-		argc >= 2 && (std::string(argv[1]) == "clean" ||
+		argc >= 2 && (std::string(argv[1]) == "clean" || std::string(argv[1]) == "clear" ||
 			std::string(argv[1]) == "mrproper"))
 	{
 		if(pocket){
@@ -65,11 +72,10 @@ int main(int argc, char* argv[]){
 		std::cout << "Current directory has forbidden characters in it: " << std::endl;
 		std::cout << cd << std::endl;
 		std::cout << "Shell will not understeand you while compiling" << std::endl;
-		return 0;
+		return 1;
 	}
 	std::vector<std::string> args;
-	for(int i = 1; i < argc; ++i)
-		args.push_back(std::string(argv[i]));
+	for(int i = 1; i < argc; ++i) args.push_back(std::string(argv[i]));
 	if(args.size() != 0 && args[0] == "uninstall"){
 		uninstall();
 		return 0;
@@ -77,9 +83,9 @@ int main(int argc, char* argv[]){
 	if(args.size() != 0 && args[0] == "reinstall"){
 		if(!exists(SourceCodeFolder)){
 			std::cout << "===================== ERROR =====================" << std::endl;
-			std::cout << "Cannot reinstall, no folder with source code" << std::endl;
+			std::cout << "Cannot find folder with source code, cannot reinstall" << std::endl;
 			std::cout << "=================================================" << std::endl;
-			return 0;
+			return 1;
 		}
 		if(!pocket) uninstall();
 		std::string cmd;
@@ -103,28 +109,26 @@ int main(int argc, char* argv[]){
 		find(args, "--default-link") != -1 || find(args, "--relink") != -1 || find(args, "-rel") != -1);
 	std::string wd = createEssentials(rebuild);
 	std::string projectConfig = wd + "/" + configFile;
-	std::vector<std::string> parameters = getParameters(args, projectConfig,cd);
+	std::vector<std::string> parameters = getParameters(args, projectConfig, cd);
 	
-	
-
 	if(args.size() != 0 && args[0] == "status"){
 		printStatus(parameters);
 		return 0;
 	}
 
 	std::ofstream out(projectConfig);
-	for(int i = 0; i < parameters.size(); ++i)
-		out << parameters[i] << std::endl;
+	for(int i = 0; i < parameters.size(); ++i) out << parameters[i] << std::endl;
 	out.close();
 	if(args.size() != 0 && args[0] == "config"){
 		std::cout << "Config updated" << std::endl;
 		return 0;
 	}
 
-	std::vector<std::string> allHeaders, allSource;
-	getAllheaders(allHeaders,cd,parameters[4]);
-	getAllsource(allSource,cd,parameters[4]);
-	if(parameters[6] != "-1"){
+	std::vector<std::string> allHeaders, allSource, allLibs;
+	getAllheaders(allHeaders,cd,parameters[4]); // fUnlink
+	getAllsource(allSource,cd,parameters[4]); // fUnlink
+	getAllLibs(allLibs,cd,parameters[13]); // fUnLibs
+	if(parameters[6] != "-1"){ // additional -I list
 		auto AddInc = split(parameters[6]);
 		for(int i = 0; i < AddInc.size(); ++i){
 			if(!std::filesystem::is_directory(AddInc[i]) || !exists(AddInc[i])){
@@ -132,26 +136,17 @@ int main(int argc, char* argv[]){
             	std::cout << "Additional directory: " << AddInc[i] << std::endl;
             	std::cout << "does not exists" << std::endl;
             	std::cout << "if it does write full path to this folder" << std::endl;
-            	return -1;
+            	return 1;
         	} 
-			getAllheaders(allHeaders, AddInc[i],parameters[4]);
-			getAllsource(allSource, AddInc[i],parameters[4]);
+			getAllheaders(allHeaders, AddInc[i], parameters[4]);
+			getAllsource(allSource, AddInc[i], parameters[4]);
+			getAllLibs(allLibs, AddInc[i], parameters[13]);
 		}
 	}
 
-
-
-	std::string sameFiles = CheckSameFiles(allSource);
-	if(sameFiles != "-1"){
-		std::cout << "===================== ERROR =====================" << std::endl;
-		std::cout << "Found two files with same name, cannot build:" << std::endl;
-		std::cout << sameFiles << std::endl;
-		return -1;
-	}
-
-
 	std::vector<std::string> includes;
 	getIncludes(includes,allHeaders,allSource,parameters[0],true);
+
 	int linkType = 0;
 	if(getName(parameters[1]).size() > 5){
 		std::string name = getName(parameters[1]);
@@ -159,14 +154,12 @@ int main(int argc, char* argv[]){
 		if(prefix == "lib" && getExt(name) == "a")
 			linkType = 1;
 	}
-
 	
 	bool changeSet = createDepfiles(wd, allHeaders, allSource, log);
-	std::vector<std::string> toCompile = compile(wd,parameters,allHeaders,allSource,changeSet, log);
+	std::vector<std::string> toCompile = compile(wd,parameters,allHeaders,allSource,changeSet,log);
 	std::string linkmsg = link(wd, parameters, includes, toCompile, 
-		log, linkType, relink, idgaf);
+		log, linkType, relink, idgaf, allLibs);
 	
-
 	if(linkmsg == "succes" && exists(parameters[1]))
 		std::cout << "============================ SUCCES ============================" << std::endl;
     else if(linkmsg == "nothing to link" && exists(parameters[1])){
@@ -174,7 +167,6 @@ int main(int argc, char* argv[]){
     	std::cout << "================================================================" << std::endl;
     }
     if(run && exists(parameters[1])){
-		//if(run && !onefile){
 		if(linkType == 0){
 			std::string cmd = parameters[1];
 			system(cmd.c_str());
@@ -184,6 +176,7 @@ int main(int argc, char* argv[]){
 			std::cout << "Cannot run a library" << std::endl;
 		}
 	}
+
 	if(linkmsg == "nothing to link")
     	return 10;
     else

@@ -1,4 +1,10 @@
 #include "Compile.h"
+
+// Структура dep файла:
+// путь к описываемому файлу
+// время изменения описываемого файла
+// все зависимости (файлы которые зависят от текущего)
+
 bool checkProgram(const std::string& programName) {
     std::string command = "which " + programName + " > /dev/null 2>&1";
     int result = system(command.c_str());
@@ -222,10 +228,10 @@ void updateFile(std::vector<std::string>& toCompile,
     if(getExt(path) != "h" && getExt(path) != "hpp" && find(toCompile, path) == -1)
         toCompile.push_back(path);
     if(v.size() > 2){
-        auto depFiles = split(v[2]);
+        auto depFiles = split(v[2]); // Берем все файлы, которые зависят от текущего
         for(int i = 0; i < depFiles.size(); ++i){
-            if(find(recCheck, getName(depFiles[i])) == -1)
-                updateFile(toCompile,depFiles[i], recCheck);
+            if(find(recCheck, getName(depFiles[i])) == -1) // Чтобы не было бесконечной рекурсии
+                updateFile(toCompile,depFiles[i], recCheck); // идем вниз по дереву зависимостей
         }
     }
 
@@ -242,76 +248,69 @@ void compileFile(const std::string& path,
     std::string compiler;
     int code = -1;
     std::string name = getName(path);
-    std::string asmFile = bd + "/" + subFolders[1] + "/" + name + ".asm";
-    std::string objFile = bd + "/" + subFolders[2] + "/" + name + ".o";
+    //std::string asmFile = bd + "/" + subFolders[1] + "/" + name + ".asm";
+    std::string objFile = bd + "/" + subFolders[1] + "/" + name + ".o";
     std::string include = "";
-    for(int i = 0; i < incDirs.size(); ++i)
-        include += std::string("-I" + incDirs[i] + " ");
+    for(int i = 0; i < incDirs.size(); ++i) include += std::string("-I" + incDirs[i] + " ");
     std::vector<std::string> compilers = split(parameters[5]); 
     std::string ext = getExt(path);
     if(ext == "cpp"){
-        if(compilers[1] == "default")
-            compiler = "g++ ";
-        else
-            compiler = (compilers[1] + " ");
+        if(compilers[1] == "default") compiler = "g++ ";
+        else compiler = (compilers[1] + " ");
     }
     else{
-        if(compilers[0] == "default")
-            compiler = "gcc ";
-        else
-            compiler = (compilers[0] + " ");
+        if(compilers[0] == "default") compiler = "gcc ";
+        else compiler = (compilers[0] + " ");
     }
-
-    // Компиляция в ассемблер для последующего парсинга
     std::string cmd = "";
-    if(ext != "cpp" && ext != "c"){
-        if(compilers[2] == "default")
-            cmd = "cpp ";
-        else
-            cmd = (compilers[2] + " ");
-        if(exists(asmFile)){
-            std::string rmcmd = "rm " + asmFile;
-            system(rmcmd.c_str());
-        }
-        cmd += ("-P " + depfile[0] + " >> " + asmFile);
-        if(log){
-            std::cout << cmd << std::endl;
-            std::cout << std::endl;
-        }
-        code = system(cmd.c_str());
-    }
-    else{
-        cmd = compiler;
-        for(int i = 7; i <= 10; ++i){
-            if(parameters[i] != "-1")
-                cmd += (parameters[i] + " "); 
-        }
-        if(parameters[12] != "-1")
-            cmd += (parameters[12] + " ");
-        cmd += (include + depfile[0] + " -S -o " + asmFile);
-        if(log){
-            std::cout << cmd << std::endl;
-            std::cout << std::endl;
-        }
-        code = system(cmd.c_str());
-    }
+    // =============== КОМПИЛЯЦИЯ В АССЕМБЛЕР : УСТАРЕЛО ===============
+    // // Компиляция в ассемблер для последующего парсинга
+    // 
+    // if(ext != "cpp" && ext != "c"){ // ассемблерный файл
+    //     if(compilers[2] == "default")
+    //         cmd = "cpp ";
+    //     else
+    //         cmd = (compilers[2] + " ");
+    //     if(exists(asmFile)){
+    //         std::string rmcmd = "rm " + asmFile;
+    //         system(rmcmd.c_str());
+    //     }
+    //     cmd += ("-P " + depfile[0] + " >> " + asmFile);
+    //     if(log){
+    //         std::cout << cmd << std::endl;
+    //         std::cout << std::endl;
+    //     }
+    //     code = system(cmd.c_str());
+    // }
+    // else{
+    //     cmd = compiler;
+    //     for(int i = 7; i <= 10; ++i){
+    //         if(parameters[i] != "-1")
+    //             cmd += (parameters[i] + " "); 
+    //     } // флаги компилятору
+    //     if(parameters[12] != "-1") // general flags
+    //         cmd += (parameters[12] + " ");
+    //     cmd += (include + depfile[0] + " -S -o " + asmFile);
+    //     if(log){
+    //         std::cout << cmd << std::endl;
+    //         std::cout << std::endl;
+    //     }
+    //     code = system(cmd.c_str());
+    // }
+    // =========================================================================
 
-    // Если компиляция в ассемблер прошла хорошо - компиляция в объектник
-    if(code == 0){
-        cmd = compiler + "-x assembler-with-cpp ";
-        for(int i = 7; i <= 10; ++i){
-            if(parameters[i] != "-1")
-                cmd += (parameters[i] + " "); 
-        }
-        if(parameters[12] != "-1")
-            cmd += (parameters[12] + " ");
-        cmd += (asmFile + " -c -o " + objFile);
-        if(log){
-            std::cout << cmd << std::endl;
-            std::cout << std::endl;
-        }
-        code = system(cmd.c_str());
-    }      
+
+    // Компиляция сразу в объектник
+    //if(code == 0){
+    if(getExt(depfile[0]) == "cpp" || getExt(depfile[0]) == "c") cmd = compiler;
+    else cmd = compiler + "-x assembler-with-cpp ";
+    for(int i = 7; i <= 10; ++i) // разные флаги + флаги конкретно компилятору
+        if(parameters[i] != "-1") cmd += (parameters[i] + " "); 
+    if(parameters[12] != "-1") cmd += (parameters[12] + " "); // general flags
+    cmd += (include + depfile[0] + " -c -o " + objFile);
+    if(log) std::cout << cmd << '\n' << std::endl;
+    code = system(cmd.c_str());
+    //}      
 
     // Обновление depFile
     std::ofstream out(path);

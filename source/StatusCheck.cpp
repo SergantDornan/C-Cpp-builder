@@ -11,11 +11,10 @@ void printStatus(const std::vector<std::string>& parameters){
 		std::cout << "Force linking files: " << parameters[3] << std::endl;
 	if(parameters[4] != "-1")
 		std::cout << "Force unlinking files: " << parameters[4] << std::endl;
-	if(parameters[5] != "default default default "){
+	if(parameters[5] != "default default"){
 		auto v = split(parameters[5]);
 		std::cout << "C compiler:	" << v[0] << std::endl;
-		std::cout << "CPP compiler:	" << v[1] << std::endl;
-		std::cout << "Preprocessor:	" << v[2] << std::endl; 
+		std::cout << "CPP compiler:	" << v[1] << std::endl; 
 	}
 	if(parameters[6] != "-1"){
 		auto v = split(parameters[6]);

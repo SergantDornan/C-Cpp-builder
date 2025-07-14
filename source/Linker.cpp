@@ -1,51 +1,66 @@
 #include "Linker.h"
-int pairFind(const std::vector<std::pair<std::string,std::string>>& v, const std::string& s){
-	for(int i = 0; i < v.size(); ++i){
-		if(v[i].first == s)
-			return i;
-	}
-	return -1;
-}
-std::vector<std::string> toLinkList(const std::vector<std::string>& parameters,
-	const std::string& wd,const bool idgaf){
 
-	std::string asmFolder = wd + "/" + reqFolders[1] + "/" + subFolders[1];
-	auto allAsm = getDirs(asmFolder);
-	allAsm.erase(allAsm.begin());
+std::vector<std::string> toLinkList(const std::vector<std::string>& parameters,
+	const std::string& wd,const bool idgaf, const std::vector<std::string>& allLibs){
+
+	std::string objFolder = wd + "/" + reqFolders[1] + "/" + subFolders[1];
+	auto allObj = getDirs(objFolder);
+	allObj.erase(allObj.begin());
 	std::vector<std::string> toLink;
 	toLink.push_back(getName(parameters[0]));
-	std::vector<asmFile> filesInfo;
-	asmFile mainAsm("main");
-	//int m = (allAsm.size() / numT) + 1;
-    //std::vector<std::thread> threads;
-    //std::vector<std::vector<std::string>> multiLink;
-    //
-   // multiLink.push_back(std::vector<std::string>(allAsm.begin(), allAsm.end()));
-    OneThreadAsmAnal(parameters[0],mainAsm,allAsm,filesInfo);
+	std::vector<binFile> filesInfo;
+	binFile mainObj = {"main"};
 
-    //
-    
-    // for(int i = 0; i < numT && i*m < allAsm.size(); ++i)
-    //     multiLink.push_back(std::vector<std::string>(allAsm.begin() + i*m,
-    //      allAsm.begin() + (((i+1)*m < allAsm.size()) ? (i+1)*m : allAsm.size())));
-    // for (int i = 0; i < multiLink.size(); ++i)
-    //     threads.push_back(std::thread(OneThreadAsmAnal,
-    //     	std::ref(parameters[0]),std::ref(mainAsm),
-    //     	std::ref(multiLink[i]),std::ref(filesInfo)));
-    // for (auto& thread : threads) {
-    //     if (thread.joinable())
-    //         thread.join(); 
-    // }
-    // std::vector<std::string> fUnlink;
-    // if(parameters[4] != "-1")
-    // 	fUnlink = split(parameters[4]);
-	std::vector<std::pair<std::string,std::string>> funcs,vars;
+	// SOME LIBRARY ACTION
+
+	std::vector<std::string> forceLinkLibs, forceUnlinkLibs;
+	if(parameters[2] != "-1") forceLinkLibs = split(parameters[2]);
+	if(parameters[13] != "-1") forceUnlinkLibs = split(parameters[13]);
+	for(int i = 0; i < forceLinkLibs.size(); ++i){
+		std::string longName = ("lib" + forceLinkLibs[i] + ".so");
+		if(find(allLibs, longName) != -1){
+			forceLinkLibs[i] = longName;
+			continue;
+		}
+		longName = ("lib" + forceLinkLibs[i] + ".a");
+		if(find(allLibs, longName) != -1){
+			forceLinkLibs[i] = longName;
+			continue;
+		}
+		std::cout << "==================== ERROR ====================" << std::endl;
+		std::cout << "Cannot find library: " << forceLinkLibs[i] << std::endl;
+		std::cout << "You specified it as a force link library" << std::endl;
+		std::cout << std::endl;
+		return std::vector<std::string>{};
+	}
+	for(int i = 0; i < forceUnlinkLibs.size(); ++i){
+		std::string longName = ("lib" + forceUnlinkLibs[i] + ".so");
+		if(find(allLibs, longName) != -1){
+			forceUnlinkLibs[i] = longName;
+			continue;
+		}
+		longName = ("lib" + forceUnlinkLibs[i] + ".a");
+		if(find(allLibs, longName) != -1){
+			forceUnlinkLibs[i] = longName;
+			continue;
+		}
+		std::cout << "==================== ERROR ====================" << std::endl;
+		std::cout << "Cannot find library: " << forceUnlinkLibs[i] << std::endl;
+		std::cout << "You specified it as a force unlink library" << std::endl;
+		std::cout << std::endl;
+		return std::vector<std::string>{};
+	}
+
+	// END SOME LIBRARY ACTION ---------------
+
+    OneThreadObjAnal(parameters[0],mainObj,allObj,allLibs,filesInfo);
+    std::map<std::string, std::string> syms;
 	std::vector<std::string> fLink, fUnlink;
 	if(parameters[3] != "-1") fLink = split(parameters[3]);
-	int code = findLinks(toLink, filesInfo, mainAsm, funcs, vars,idgaf);
+	int code = findLinks(toLink, filesInfo, mainObj, syms, idgaf);
 	for(int i = 0; i < fLink.size(); ++i){
 		bool b = true;
-		asmFile file("???");
+		binFile file;
 		for(int j = 0; j < filesInfo.size(); ++j){
 			if(filesInfo[j].name == fLink[i]){
 				file = filesInfo[j];
@@ -59,170 +74,81 @@ std::vector<std::string> toLinkList(const std::vector<std::string>& parameters,
 			std::cout << "===================================================" << std::endl;
 			return std::vector<std::string>{};
 		}
-		code |= findLinks(toLink, filesInfo, file, funcs, vars,idgaf);
+		code |= findLinks(toLink, filesInfo, file, syms,idgaf);
 	}
 	if(parameters[4] != "-1") fUnlink = split(parameters[4]);
 	toLink -= fUnlink;
-	if(code == 0)
-		return toLink;
-	else
-		return std::vector<std::string>{};
+	if(code == 0) return toLink;
+	else return std::vector<std::string>{};
 }
-void OneThreadAsmAnal(const std::string& name,asmFile& mainAsm,
-	const std::vector<std::string>& dirs,
-	std::vector<asmFile>& filesInfo){
+void OneThreadObjAnal(const std::string& name,binFile& mainObj,
+	const std::vector<std::string>& dirs,const std::vector<std::string>& allLibs,
+	std::vector<binFile>& filesInfo){
 
 	std::string onlyName = getName(name);
 	for(int i = 0; i < dirs.size(); ++i){
-		asmFile newfile(getNameNoExt(dirs[i]));
-		std::string line;
-		std::ifstream in(dirs[i]);
-		while(std::getline(in, line)) newfile.add(line);
-		in.close();
-		newfile.defFuncs -= newfile.weaks;
+		binFile newfile = parse_ELF_File(dirs[i]);
 		filesInfo.push_back(newfile);
-		if(newfile.name == onlyName)
-			mainAsm = newfile;
-	}
-
-}
-int findLinks(std::vector<std::string>& toLink, const std::vector<asmFile>& filesInfo,
-	const asmFile& file,std::vector<std::pair<std::string,std::string>>& funcs,
-	std::vector<std::pair<std::string,std::string>>& vars, const bool idgaf){
-
-	for(int i = 0; i < file.callFuncs.size(); ++i){
-		for(int j = 0; j < filesInfo.size(); ++j){
-			if(find(filesInfo[j].defFuncs, file.callFuncs[i]) != -1){
-				if(pairFind(funcs, file.callFuncs[i]) != -1 && 
-					funcs[pairFind(funcs, file.callFuncs[i])].second != filesInfo[j].name && !idgaf)
-				{
-					std::cout << "=================== ERROR ===================" << std::endl;
-					std::cout << "multiple definition of function: " << std::endl;
-					std::cout << file.callFuncs[i] << std::endl;
-					std::cout << std::endl;
-					std::cout << "First definition in file: " << funcs[pairFind(funcs, file.callFuncs[i])].second << ".asm" << std::endl;
-					std::cout << "Second definition in file: " << filesInfo[j].name << ".asm" << std::endl;
-					std::cout << std::endl;
-					std::cout << "You can choose not to link files forcibly by using the flag: --no-link-force [filename]" << std::endl;
-					std::cout << "Or you can run builder with --idgaf flag to ignore this error" << std::endl;
-					std::cout << std::endl;
-					std::cout << "=============================================" << std::endl;
-					return -1; 
-				}
-				if(find(toLink, filesInfo[j].name) == -1){
-					toLink.push_back(filesInfo[j].name);
-					funcs.push_back(std::pair<std::string,std::string>{file.callFuncs[i],filesInfo[j].name});
-					findLinks(toLink,filesInfo,filesInfo[j],funcs,vars,idgaf);
-				}
-			}
+		if(newfile.name == onlyName){
+			mainObj.name = std::move(newfile.name);
+			mainObj.callSyms = std::move(newfile.callSyms);
+			mainObj.defSyms = std::move(newfile.defSyms);
 		}
 	}
-	for(int i = 0; i < file.callVars.size(); ++i){
+}
+int findLinks(std::vector<std::string>& toLink, const std::vector<binFile>& filesInfo,
+	const binFile& file, std::map<std::string,std::string>& syms, const bool idgaf)
+{
+
+	// syms : <sym_name, file_name>
+	// syms служит для отслеживания конфликтов
+
+	for(int i = 0; i < file.callSyms.size(); ++i){
 		for(int j = 0; j < filesInfo.size(); ++j){
-			if(find(filesInfo[j].defVars, file.callVars[i]) != -1){
-				if(pairFind(vars, file.callVars[i]) != -1 &&
-					vars[pairFind(vars,file.callVars[i])].second != filesInfo[j].name && !idgaf){
+			if(find(filesInfo[j].defSyms, file.callSyms[i]) != -1){ // Нашли совпадение
+				if(syms.find(file.callSyms[i]) != syms.end() &&
+					syms[file.callSyms[i]] != filesInfo[j].name && !idgaf)
+				{ // Уже такой был => уже определили => конфликт
 					std::cout << "=================== ERROR ===================" << std::endl;
-					std::cout << "multiple definition of variable: " << std::endl;
-					std::cout << file.callVars[i] << std::endl;
+					std::cout << "multiple definition of symbol: " << std::endl;
+					std::cout << file.callSyms[i] << std::endl;
 					std::cout << std::endl;
-					std::cout << "First definition in file: " << vars[pairFind(vars,file.callVars[i])].second << ".asm" << std::endl;
-					std::cout << "Second definition in file: " << filesInfo[j].name << ".asm" << std::endl;
+					std::cout << "First definition in file: " << syms[file.callSyms[i]] << ".o" << std::endl;
+					std::cout << "Second definition in file: " << filesInfo[j].name << ".o" << std::endl;
 					std::cout << std::endl;
 					std::cout << "You can choose not to link files forcibly by using the flag: --no-link-force [filename]" << std::endl;
 					std::cout << "Or you can run builder with --idgaf flag to ignore this error" << std::endl;
 					std::cout << std::endl;
 					std::cout << "=============================================" << std::endl;
-					return -1; 
+					return -1;
 				}
+				// Конфликтов нет, либо мы их игнорируем:
 				if(find(toLink, filesInfo[j].name) == -1){
 					toLink.push_back(filesInfo[j].name);
-					vars.push_back(std::pair<std::string,std::string>{file.callVars[i], filesInfo[j].name});
-					findLinks(toLink,filesInfo,filesInfo[j],funcs,vars,idgaf);
+					syms[file.callSyms[i]] = filesInfo[j].name;
+					findLinks(toLink, filesInfo, filesInfo[j], syms, idgaf);
 				}
 			}
 		}
 	}
 	return 0;
 }	
-void getAllLibs(std::vector<std::string>& libDirs,
-	std::vector<std::string>& libsToLink, 
-	const std::string& path){
-
-	auto dirs = getDirs(path);
-	for(int i = 1; i < dirs.size(); ++i){
-		if(std::filesystem::is_directory(dirs[i]))
-			getAllLibs(libDirs,libsToLink,dirs[i]);
-		else{
-			std::string name = getNameNoExt(dirs[i]);
-			while(getExt(name) != "-1")
-				name = getNameNoExt(name);
-			if(name.size() < 4)continue;
-			if(std::string(name.begin(), name.begin() + 3) != "lib")continue;
-			std::string shortName(name.begin() + 3, name.end());
-			if(find(libsToLink, shortName) != -1){
-				std::string folder = getFolder(dirs[i]);
-				if(find(libDirs, folder) == -1)
-					libDirs.push_back(folder);
-			}
-		}
-	}
-}
 std::string link(const std::string& wd, 
 	const std::vector<std::string>& parameters,
 	const std::vector<std::string>& includes, 
 	const std::vector<std::string>& toCompile,
 	const bool log, const int linkType, const bool relink,
-	const bool idgaf){
+	const bool idgaf, const std::vector<std::string>& allLibs)
+{
 
 	if(toCompile.size() == 0 && exists(parameters[1]) && !relink)
 		return "nothing to link";
-	std::string flags = " ";
-	std::vector<std::string> libDirs;
-	if(parameters[2] != "-1"){
-		std::vector<std::string> libsToLink = split(parameters[2]);
-		getAllLibs(libDirs,libsToLink,cd);
-		//getAllLibs(libDirs,libsToLink,"/usr/lib");
-		if(parameters[6] != "-1"){
-			auto addDirs = split(parameters[6]);
-			for(int i = 0; i < addDirs.size(); ++i)
-				getAllLibs(libDirs,libsToLink,addDirs[i]);
-		}
-		for(int i = 0; i < libDirs.size(); ++i)
-			flags += ("-L" + libDirs[i] + " ");
-		for(int i = 0; i < libsToLink.size(); ++i)
-			flags += ("-l" + libsToLink[i] + " ");
-	}
-	std::vector<std::string> toLink = toLinkList(parameters,wd,idgaf);
+
+	std::vector<std::string> toLink = toLinkList(parameters,wd,idgaf, allLibs);
+
 	if(toLink.size() == 0)
 		return "nothing to link";
-	// std::vector<std::string> fLink, fUnlink;
-	// if(parameters[3] != "-1")
-	// 	fLink = split(parameters[3]);
-	// if(parameters[4] != "-1")
-	// 	fUnlink = split(parameters[4]);
-	// for(int i = 0; i < fLink.size(); ++i){
-	// 	if(getExt(fLink[i]) != "o")
-	// 		fLink[i] += ".o";
-	// }
-	// for(int i = 0; i < fUnlink.size(); ++i){
-	// 	if(getExt(fUnlink[i]) != "o")
-	// 		fUnlink[i] += ".o";
-	// }
-	//toLink -= fUnlink;
-	// for(int i = 0; i < fLink.size(); ++i){
-	// 	if(find(toLink, fLink[i]) == -1){
-	// 		std::string path = wd + "/" + reqFolders[1] + "/" + subFolders[2] + "/" + fLink[i] + ".o";
-	// 		if(exists(path))
-	// 			toLink.push_back(fLink[i]);
-	// 		else{
-	// 			std::cout << "======================== ERROR ========================" << std::endl;
-	// 			std::cout << "Cannot find file: " << fLink[i] << std::endl;
-	// 			std::cout << "You specified it as a file for forced linking" << std::endl;
-	// 			return "error";
-	// 		}
-	// 	}
-	// }
+	
 	bool linking = false;
 	for(int i = 0; i < toLink.size(); ++i){
 		for(int j = 0; j < toCompile.size(); ++j){
@@ -231,17 +157,10 @@ std::string link(const std::string& wd,
 				break;
 			}
 		}
-		if(linking)
-			break;
+		if(linking) break;
 	}
-	if(!exists(parameters[1]))
-		linking = true;
-	if(toLink.size() == 0)
-		linking = false;
-	if(relink)
-		linking = true;
-	if(!linking)
-		return "nothing to link";
+	if(!exists(parameters[1]) || relink) linking = true;
+	if(!linking) return "nothing to link";
 
 	if(exists(parameters[1])){
 		std::string cmd = "rm " + parameters[1];
@@ -265,14 +184,14 @@ std::string link(const std::string& wd,
 				break;
 			}
 		}
-		if(!erase)
-			it++;
+		if(!erase) it++;
 	}
+
 	for(int i = 0; i < toLink.size(); ++i){
-		std::string path = wd + "/" + reqFolders[1] + "/" + subFolders[2] + "/" + toLink[i] + ".o";
+		std::string path = wd + "/" + reqFolders[1] + "/" + subFolders[1] + "/" + toLink[i] + ".o";
 		toLink[i] = path;
 	}
-	//toLink -= fUnlink;
+
 	if(linkType == 0){
 		std::string compiler;
 		std::vector<std::string> compilers = split(parameters[5]);
@@ -291,7 +210,7 @@ std::string link(const std::string& wd,
 		}
 		for(int i = 0; i < toLink.size(); ++i)
 			cmd += (toLink[i] + " ");
-		cmd += (flags + " ");
+		cmd += (libFlags + " ");
 		cmd += (" -o " + parameters[1]);
 		if(log){
 			std::cout << std::endl;
@@ -300,17 +219,18 @@ std::string link(const std::string& wd,
 		}
 		system(cmd.c_str());
 	}
-	else if(linkType == 1){
-		std::string cmd = "ar rc " + parameters[1] + " ";
-		for(int i = 0; i < toLink.size(); ++i)
-			cmd += (toLink[i] + " ");
-		if(log){
-			std::cout << std::endl;
-			std::cout << "Linking" << std::endl;
-			std::cout << cmd << std::endl;
-		}
-		system(cmd.c_str());
-	}
+	// else if(linkType == 1){
+	// 	std::string cmd = "ar rc " + parameters[1] + " ";
+	// 	for(int i = 0; i < toLink.size(); ++i)
+	// 		cmd += (toLink[i] + " ");
+	// 	if(log){
+	// 		std::cout << std::endl;
+	// 		std::cout << "Linking" << std::endl;
+	// 		std::cout << cmd << std::endl;
+	// 	}
+	// 	system(cmd.c_str());
+	// } // TODO
+
 	if(parameters[2] != "-1" && libDirs.size() > 0){
 		std::string cmd = postSharedLink;
 		for(int i = 0; i < libDirs.size(); ++i)

@@ -12,7 +12,7 @@ CFLAGS=$(GENERALFLAGS) $(OPT) $(DEPFLAGS)
 CFILES=$(foreach D, $(SOURCEDIR), $(wildcard $(D)/*.cpp))
 OBJECTS=$(patsubst $(SOURCEDIR)%.cpp, $(deps)%.o, $(CFILES))
 DEPFILES= $(patsubst $(SOURCEDIR)%.cpp, $(deps)%.d, $(CFILES)) $(deps)/installer.d
-INSTALLOBJECTS= $(deps)/installer.o $(deps)/alias.o $(deps)/BuilderFilework.o $(deps)/uninstall.o $(deps)/filework.o $(deps)/inputs.o
+INSTALLOBJECTS= $(deps)/installer.o $(deps)/alias.o $(deps)/BuilderFilework.o $(deps)/uninstall.o $(deps)/filework.o $(deps)/algs.o
 
 all:$(OUTPUT)
 
@@ -37,4 +37,5 @@ $(deps)/%.o:$(SOURCEDIR)/%.cpp
 $(deps)/installer.o:./installer.cpp
 	$(CPPC) $(CFLAGS) $(foreach D,$(INCDIR),-I$(D)) -c $< -o $@
 
--include $(DEPFILES) 
+-include $(DEPFILES)
+

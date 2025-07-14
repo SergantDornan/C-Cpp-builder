@@ -137,19 +137,20 @@ std::string createEssentials(const bool reb){
 			std::string cmd = "touch " + folder + "/" + configFile;
 			system(cmd.c_str());
 			std::ofstream out(folder + "/" + configFile);
-			out << "-1" << std::endl;
-			out << "out" << std::endl;
-			out << "-1" << std::endl;
-			out << "-1" << std::endl;
-			out << "-1" << std::endl;
-			out << "default default default" << std::endl;
-			out << "-1" << std::endl;
-			out << "-1" << std::endl;
-			out << "-1" << std::endl;
-			out << "-1" << std::endl;
-			out << "-1" << std::endl;
-			out << "-1" << std::endl;
-			out << "-1" << std::endl;
+			out << "-1" << std::endl; // 0 main input
+			out << "out" << std::endl; // 1 output name
+			out << "-1" << std::endl; // 2 libs linking (force)
+			out << "-1" << std::endl; // 3 force link list
+			out << "-1" << std::endl; // 4 force unlink list
+			out << "default default" << std::endl; // 5 compilers (C, C++)
+			out << "-1" << std::endl; // 6 additional -I list
+			out << "-1" << std::endl; // 7 C standart
+			out << "-1" << std::endl; // 8 optimization flag
+			out << "-1" << std::endl; // 9 debug flag
+			out << "-1" << std::endl; // 10 Flags to compiler
+			out << "-1" << std::endl; // 11 Flags to linker
+			out << "-1" << std::endl; // 12 general Flags
+			out << "-1" << std::endl; // 13 force Unlink Libs
 			out.close();
 		}
 	}
