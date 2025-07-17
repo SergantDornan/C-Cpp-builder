@@ -11,7 +11,7 @@ binFile parse_ELF_File(const std::string& path){
 
     uint8_t arch = uint8_t(*(elf + 4)); // 1 - 32 бит, 2 - 64 бит
     if(arch == 2) {
-    	Elf64_parse_result result = {getNameNoExt(path)};
+    	Elf64_parse_result result = {getNameNoExt(path)}; // NO EXT потому что объектный файл, отрезаем .o
     	parse64(result, elf);
         binFile binF;
         binF.name = std::move(result.name);
@@ -20,7 +20,7 @@ binFile parse_ELF_File(const std::string& path){
     	return binF;
     }
    	else {
-   		Elf32_parse_result result = {getNameNoExt(path)};
+   		Elf32_parse_result result = {getNameNoExt(path)}; // NO EXT потому что объектный файл, отрезаем .o
    		parse32(result, elf);
    		binFile binF;
         binF.name = std::move(result.name);

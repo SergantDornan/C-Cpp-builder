@@ -18,14 +18,18 @@ std::vector<std::string> toLinkList(const std::vector<std::string>& parameters,
 	if(parameters[13] != "-1") forceUnlinkLibs = split(parameters[13]);
 	for(int i = 0; i < forceLinkLibs.size(); ++i){
 		std::string longName = ("lib" + forceLinkLibs[i] + ".so");
-		if(find(allLibs, longName) != -1){
-			forceLinkLibs[i] = longName;
-			continue;
+		for(int i = 0; i < allLibs.size(); ++i){
+			if(getName(allLibs[i]) == longName){
+				forceLinkLibs[i] = longName;
+				continue;	
+			}
 		}
 		longName = ("lib" + forceLinkLibs[i] + ".a");
-		if(find(allLibs, longName) != -1){
-			forceLinkLibs[i] = longName;
-			continue;
+		for(int i = 0; i < allLibs.size(); ++i){
+			if(getName(allLibs[i]) == longName){
+				forceLinkLibs[i] = longName;
+				continue;
+			}
 		}
 		std::cout << "==================== ERROR ====================" << std::endl;
 		std::cout << "Cannot find library: " << forceLinkLibs[i] << std::endl;
@@ -35,14 +39,18 @@ std::vector<std::string> toLinkList(const std::vector<std::string>& parameters,
 	}
 	for(int i = 0; i < forceUnlinkLibs.size(); ++i){
 		std::string longName = ("lib" + forceUnlinkLibs[i] + ".so");
-		if(find(allLibs, longName) != -1){
-			forceUnlinkLibs[i] = longName;
-			continue;
+		for(int i = 0; i < allLibs.size(); ++i){
+			if(getName(allLibs[i]) == longName){
+				forceUnlinkLibs[i] = longName;
+				continue;	
+			}
 		}
 		longName = ("lib" + forceUnlinkLibs[i] + ".a");
-		if(find(allLibs, longName) != -1){
-			forceUnlinkLibs[i] = longName;
-			continue;
+		for(int i = 0; i < allLibs.size(); ++i){
+			if(getName(allLibs[i]) == longName){
+				forceUnlinkLibs[i] = longName;
+				continue;	
+			}
 		}
 		std::cout << "==================== ERROR ====================" << std::endl;
 		std::cout << "Cannot find library: " << forceUnlinkLibs[i] << std::endl;
@@ -56,7 +64,7 @@ std::vector<std::string> toLinkList(const std::vector<std::string>& parameters,
     OneThreadObjAnal(parameters[0],mainObj,allObj,allLibs,filesInfo);
     std::map<std::string, std::string> syms;
 	std::vector<std::string> fLink, fUnlink;
-	if(parameters[3] != "-1") fLink = split(parameters[3]);
+	if(parameters[3] != "-1") fLink = split(parameters[3]); 
 	int code = findLinks(toLink, filesInfo, mainObj, syms, idgaf);
 	for(int i = 0; i < fLink.size(); ++i){
 		bool b = true;
@@ -85,6 +93,7 @@ void OneThreadObjAnal(const std::string& name,binFile& mainObj,
 	const std::vector<std::string>& dirs,const std::vector<std::string>& allLibs,
 	std::vector<binFile>& filesInfo){
 
+	// ------------- OBJ ANAL -------------
 	std::string onlyName = getName(name);
 	for(int i = 0; i < dirs.size(); ++i){
 		binFile newfile = parse_ELF_File(dirs[i]);
@@ -95,6 +104,21 @@ void OneThreadObjAnal(const std::string& name,binFile& mainObj,
 			mainObj.defSyms = std::move(newfile.defSyms);
 		}
 	}
+	// ------------- LIB ANAL -------------
+	for(int i = 0; i < allLibs.size(); ++i){
+		std::string ext = getExt(allLibs[i]);
+		if(ext == "so") filesInfo.push_back(parse_ELF_File(allLibs[i]));
+		else if(ext == "a"){
+			std::cout << "ABOBA ABOBA" << std::endl;
+			std::cout << std::endl;
+		}
+		else{
+			std::cout << "==================== ERROR ====================" << std::endl;
+			std::cout << "UNKNOWN LIB EXT: " << ext << std::endl;
+			std::cout << std::endl;
+		}
+	}
+
 }
 int findLinks(std::vector<std::string>& toLink, const std::vector<binFile>& filesInfo,
 	const binFile& file, std::map<std::string,std::string>& syms, const bool idgaf)
@@ -102,7 +126,6 @@ int findLinks(std::vector<std::string>& toLink, const std::vector<binFile>& file
 
 	// syms : <sym_name, file_name>
 	// syms служит для отслеживания конфликтов
-
 	for(int i = 0; i < file.callSyms.size(); ++i){
 		for(int j = 0; j < filesInfo.size(); ++j){
 			if(find(filesInfo[j].defSyms, file.callSyms[i]) != -1){ // Нашли совпадение
@@ -145,7 +168,6 @@ std::string link(const std::string& wd,
 		return "nothing to link";
 
 	std::vector<std::string> toLink = toLinkList(parameters,wd,idgaf, allLibs);
-
 	if(toLink.size() == 0)
 		return "nothing to link";
 	
@@ -210,7 +232,7 @@ std::string link(const std::string& wd,
 		}
 		for(int i = 0; i < toLink.size(); ++i)
 			cmd += (toLink[i] + " ");
-		cmd += (libFlags + " ");
+		//cmd += (libFlags + " ");
 		cmd += (" -o " + parameters[1]);
 		if(log){
 			std::cout << std::endl;
@@ -231,15 +253,15 @@ std::string link(const std::string& wd,
 	// 	system(cmd.c_str());
 	// } // TODO
 
-	if(parameters[2] != "-1" && libDirs.size() > 0){
-		std::string cmd = postSharedLink;
-		for(int i = 0; i < libDirs.size(); ++i)
-			cmd += (":" + libDirs[i]);
-		if(log){
-			std::cout << std::endl;
-			std::cout << cmd << std::endl;
-		}
-		system(cmd.c_str());
-	}
+	// if(parameters[2] != "-1" && libDirs.size() > 0){
+	// 	std::string cmd = postSharedLink;
+	// 	for(int i = 0; i < libDirs.size(); ++i)
+	// 		cmd += (":" + libDirs[i]);
+	// 	if(log){
+	// 		std::cout << std::endl;
+	// 		std::cout << cmd << std::endl;
+	// 	}
+	// 	system(cmd.c_str());
+	// }
 	return "succes";
 }

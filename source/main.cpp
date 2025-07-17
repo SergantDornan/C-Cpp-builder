@@ -2,7 +2,6 @@
 #include "DepFiles.h"
 #include "Compile.h"
 #include "Linker.h"
-#include "mainFuncs.h"
 #include "Flags.h"
 #include "uninstall.h"
 #include "StatusCheck.h"
