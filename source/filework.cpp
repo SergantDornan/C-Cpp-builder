@@ -1,4 +1,68 @@
 #include <filework.h>
+std::string getFullPath(std::string cd, std::string relpath){
+    if(relpath[relpath.size()-1] == '.') relpath += '/';
+    if(cd[(cd.size()-1)] == '/') cd = std::string(cd.begin(), cd.end()-1);
+    if(relpath.size() >= 2 && relpath[0] == '.' && relpath[1] == '/')
+        return (cd + std::string(relpath.begin() + 1, relpath.end()));
+    bool b = false;
+    while(relpath.size() >= 3 && relpath[0] == '.' && relpath[1] == '.' && relpath[2] == '/'){
+        b = true;
+        if(getFolder(cd) == ""){
+            std::cout << "======================== ERROR ========================" << std::endl;
+            std::cout << "filework.cpp: cannot convert relative path to full path" << std::endl;
+            std::cout << "Current directory: " << cd << std::endl;
+            std::cout << "relative path: " << relpath << std::endl;
+            std::cout << std::endl;
+            return "-1";
+        }
+        cd = getFolder(cd);
+        relpath = std::string(relpath.begin() + 3, relpath.end());
+    }
+    if(b) return (cd + "/" + relpath);
+    else return relpath;
+}
+
+void findFile(std::vector<std::string>& result,
+    const std::string& name0, const std::string& dir,
+    const std::vector<std::string>& AddInc,
+    const std::vector<std::string>& fUnInc){
+    
+    auto find = [](const std::vector<std::string>& v, const std::string& s){
+        for(int i = 0; i < v.size(); ++i)
+            if(v[i] == s) return i;
+        return -1;
+    };
+    std::string name = getFullPath(dir, name0);
+    // Нашли по полному пути:
+    if(exists(name)){
+        std::string path;
+        if(getFolder(name) == "") path = (dir + "/" + name);
+        else path = name;
+        if(find(result, path) == -1) result.push_back(path);
+        return;
+    }
+    // Не нашли по полному пути => было только имя, ищем по нему
+    // Проход по dir
+    auto dirs = getDirs(dir);
+    for(int i = 1; i < dirs.size(); ++i){
+        if(dirs[i].find(name) != std::string::npos && 
+            (dirs[i].find(name) == (dirs[i].size() - name.size())) &&
+            find(result, dirs[i]) == -1) result.push_back(dirs[i]);
+        if(std::filesystem::is_directory(dirs[i]) && 
+            find(fUnInc, dirs[i]) == -1) findFile(result, name, dirs[i], {}, fUnInc);
+    }
+    // Проход по всем AddInc
+    for(int i = 0; i < AddInc.size(); ++i){
+        auto addDirs = getDirs(AddInc[i]);
+        for(int j = 1; j < addDirs.size(); ++j){
+            if(addDirs[j].find(name) != std::string::npos &&
+                (addDirs[j].find(name) == (addDirs[j].size() - name.size())) &&
+                find(result, addDirs[j]) == -1) result.push_back(addDirs[j]);
+            if(std::filesystem::is_directory(addDirs[j]) &&
+                find(fUnInc, addDirs[j]) == -1) findFile(result, name, addDirs[j], {}, fUnInc);
+        }
+    }
+}
 
 long getFileSize(const std::string& filename) {
     std::ifstream file(filename, std::ifstream::ate | std::ifstream::binary);
@@ -12,7 +76,7 @@ std::string cwd(){
     } 
     else {
         std::cout << "==================== ERROR ====================" << std::endl;
-        std::cout << "====== some error in install.cpp : std::string cwd() ======";
+        std::cout << "====== some error in filework.cpp : std::string cwd() ======";
         std::cout << std::endl;
         return "";
     }
@@ -61,7 +125,7 @@ std::string getHomedir(){
         return homeDir;
     } else {
         std::cout << "======================== ERROR ========================" << std::endl;
-        std::cout << "==== some error in BuilderFilework.cpp: getHomedir() ====" << std::endl;
+        std::cout << "==== some error in filework.cpp: getHomedir() ====" << std::endl;
         std::cout << std::endl;      
         return "";
     }
@@ -75,7 +139,7 @@ void appendToFile(const std::string& path, const std::string& s){
     }
     else{
         std::cout << "============================ ERROR ============================" << std::endl;
-        std::cout << "======= BuilderFilework.cpp: appendToFile() ======" << std::endl;
+        std::cout << "======= filework.cpp: appendToFile() ======" << std::endl;
         std::cout << "Cannot open file: " << path << std::endl;
         std::cout << std::endl;
     }
@@ -84,7 +148,7 @@ std::string formatTime(time_t timestamp) {
     std::tm *timeInfo = localtime(&timestamp);
     if (timeInfo == nullptr) {
         std::cout << "===================== ERROR =====================" << std::endl;
-        std::cout << "====== BuilderFilework.cpp: formatTime() - some error idn ======" << std::endl;
+        std::cout << "====== filework.cpp: formatTime() - some error idn ======" << std::endl;
         std::cout << std::endl;
         return "";
     }
@@ -97,7 +161,7 @@ std::string getChangeTime(const std::string& path){
     struct stat fileInfo;
     if (stat(filename, &fileInfo) != 0) {
         std::cout << "===================== ERROR =====================" << std::endl;
-        std::cout << "====== BuilderFilework.cpp: getChangeTime() ======" << std::endl;
+        std::cout << "====== filework.cpp: getChangeTime() ======" << std::endl;
         std::cout << "Error getting file information: " << filename << std::endl;
         std::cout << std::endl;
         return "";
@@ -115,7 +179,7 @@ std::string getExt(const std::string& file){
     }
     if(index != -1)
         return std::string(file.begin() + index + 1,file.end());
-    return "-1";
+    return "";
 }
 std::string getNameNoExt(const std::string& path){
     std::string long_name = path;

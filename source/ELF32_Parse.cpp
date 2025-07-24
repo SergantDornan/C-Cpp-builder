@@ -8,7 +8,7 @@ void parse32(Elf32_parse_result& result, unsigned char* elf){
     if(!correctEndian) swapBytesElfHeader(elfHeader);
     if (elfHeader -> e_shnum > 0) {
         Elf32_Shdr* sectionHeaders = (Elf32_Shdr*)(elf + elfHeader -> e_shoff);
-        for (size_t i = 0; i < elfHeader -> e_shnum; ++i) {
+        for(int i = 0; i < elfHeader -> e_shnum; ++i){
             Elf32_Shdr* sH = &sectionHeaders[i];
             if(!correctEndian) swapBytesSectionHeader(sH);
         }
@@ -21,6 +21,7 @@ void parse32(Elf32_parse_result& result, unsigned char* elf){
         std::cout << "=========================== ERROR ===========================" << std::endl;
         std::cout << "ELF32_Parse.cpp" << std::endl;
         std::cout << "File: " << result.name << " has no Section Table (wtf?)" << std::endl;
+        std::cout << "This is very weird, try running belder with -reb flag or with \"clear\" option" << std::endl;
         std::cout << std::endl;
         return;   
     }
@@ -47,13 +48,15 @@ void process_symbol_table32(Elf32_parse_result& result, unsigned char* elf, Elf3
         unsigned char symbol_bind = symbol_info >> 4;  //ELF64_ST_BIND(symbol_info) разворачивается в это.  Верхние 4 бита.
         // Получить индекс секции, к которой относится символ
         uint16_t symbol_section_index = symbol->st_shndx;
-        if((symbol_type == 1 || symbol_type == 2) && symbol_bind != 2){
+        if((symbol_type == 1 || symbol_type == 2) && symbol_bind != 2 && symbol_bind != 0){
             // symbol_type == 1 || symbol_type == 2 - OBJECT or FUNC - функция или переменная
-            // WEAK функции не включаем потому что не прикольно
+            // WEAK и LOCAL не включаем потому что не прикольно
             result.defSyms.push_back(symbol_name);
         }
 
-        if(symbol_type == 0 && symbol_section_index == 0 && (symbol_bind == 1 || symbol_bind == 2)){
+        if(symbol_type == 0 && symbol_section_index == 0 
+            && (symbol_bind == 1 || symbol_bind == 2))
+        {
             // symbol_type == 0 => type == NOTYPE, то есть не знаем какой тип
             // symbol_section_index == 0 => не определено ни в одной секции
             // symbol_bind == 1 || symbol_bind == 2 - GLOBAL или WEAK

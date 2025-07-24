@@ -1,6 +1,7 @@
 #include "Flags.h"
 #include "algs.h"
-bool isLib(const std::string& s){
+bool isLib(const std::string& s0){
+	std::string s = getName(s0);
 	if(s.size() < 4) return false;
 	if(std::string(s.begin(), s.begin() + 3) != "lib") return false;
 	if(getExt(s) != "a" && getExt(s) != "so") return false;
@@ -10,17 +11,7 @@ bool isFlag(const std::string& s){
 	return ((s.size() >= 2 && s[0] == '-' && s[1] != '-') ||
 	(s.size() >= 3 && s[0] == '-' && s[1] == '-' && s[2] != '-'));	
 }
-std::string findFile(const std::string& name, const std::string& dir){
-	auto dirs = getDirs(dir);
-	for(int i = 1; i < dirs.size(); ++i){
-		if(name == getName(dirs[i])) return dirs[i];
-		if(std::filesystem::is_directory(dirs[i])){
-			std::string s = findFile(name,dirs[i]);
-			if(s != "-1") return s;
-		}
-	}
-	return "-1";
-}
+
 std::vector<std::string> getParameters(std::vector<std::string>& args,
 	const std::string& path, const std::string& cd)
 {
@@ -30,7 +21,9 @@ std::vector<std::string> getParameters(std::vector<std::string>& args,
 	std::string line;
 	while(std::getline(in, line)) parameters.push_back(line);
 	in.close();
-	if(find(args, "--clear-flags") != -1){
+	if(find(args, "--clear-flags") != -1 || find(args, "--clean-flags") != -1 ||
+		find(args, "--flags-clear") != -1 || find(args, "--flags-clean") != -1)
+	{
 		for(int i = 7; i <= 12; ++i)
 			parameters[i] = "-1";
 	}
@@ -52,22 +45,21 @@ std::vector<std::string> getParameters(std::vector<std::string>& args,
 			it++;
 	}
 
+	getAddDirs(args, parameters);
 	FindForceLinkUnlink(args, parameters);
 	getSpecFlags(args, parameters[10], "--compile-flags");
 	getSpecFlags(args, parameters[11], "--link-flags");
 	getRestFlags(args, parameters[12]);
-	findEntryFile(args,parameters[0],cd);
+	findEntryFile(args,cd, parameters);
 	auto compilers = split(parameters[5]);
 	getNameAfterFlag(args, "--CC", compilers[0]);
 	getNameAfterFlag(args, "--CXX", compilers[1]);
-	getNameAfterFlag(args, "--preproc", compilers[2]);
 	parameters[5] = "";
 	for(int i = 0; i < compilers.size(); ++i)
 		parameters[5] += (compilers[i] + " ");
 	getNameAfterFlag(args, "-o", parameters[1]);
 	if(getFolder(parameters[1]) == "")
 		parameters[1] = (cd + "/" + parameters[1]);
-	getIdirs(args, parameters[6]);
 	return parameters;
 }
 bool isStandart(const std::string& s){
@@ -90,7 +82,7 @@ void getSpecFlags(std::vector<std::string>& args, std::string& s, const std::str
 		}
 		if(find(switchFlags, *it) != -1)
 			break;
-		if(!get){
+		if(!get || find(keyWords, (*it)) != -1){
 			it++;
 			continue;
 		}
@@ -102,7 +94,7 @@ void getSpecFlags(std::vector<std::string>& args, std::string& s, const std::str
 }
 void getRestFlags(const std::vector<std::string>& args, std::string& s){
 	for(int i = 0; i < args.size(); ++i){
-		if(find(possibleFlags, args[i]) == -1 && 
+		if(find(possibleFlags, args[i]) == -1 && find(keyWords, args[i]) == -1 && 
 			!(args[i].size() >= 2 && args[i][0] == '-' && (args[i][1] == 'I' || args[i][1] == 'l')))
 		{
 			if(isFlag(args[i]) || (i > 0 && find(possibleFlags, args[i-1]) == -1)){
@@ -113,66 +105,100 @@ void getRestFlags(const std::vector<std::string>& args, std::string& s){
 		}
 	}
 }
-void getIdirs(const std::vector<std::string>& args, std::string& s){
-	std::vector<std::string> AddInc;
-	if (s != "-1") AddInc = split(s);
-	for(int i = 0; i < args.size(); ++i){
-		if(isFlag(args[i]) && args[i][1] == 'I'){
-			std::string folder(args[i].begin() + 2, args[i].end());
-			if(find(AddInc, folder) == -1) AddInc.push_back(folder);
+void getAddDirs(std::vector<std::string>& args, std::vector<std::string>& parameters){
+	
+	std::vector<std::string> AddInc, fUnInc, defInc;
+	if(parameters[6] != "-1") AddInc = split(parameters[6]);
+	if(parameters[14] != "-1") fUnInc = split(parameters[14]);
+	auto it = args.begin();
+	while(it != args.end()){
+		if(isFlag(*it) && (*it)[1] == 'I'){
+			std::string folder((*it).begin() + 2, (*it).end());
+			std::string fullpath = getFullPath(cd, folder);
+			if(fullpath != "-1" && find(AddInc, fullpath) == -1) AddInc.push_back(fullpath);
+			args.erase(it);
 		}
+		else it++;
 	}
-	std::vector<std::string> NoInc;
-	for(int i = 0; i < args.size(); ++i){
-		if(args[i] == "--no-include"){
-			if((i + 1) >= args.size() || ((i + 1) < args.size() &&
-			isFlag(args[i + 1]))){
-				std::cout << "======================== ERROR ========================" << std::endl;
-				std::cout << "no folder after --no-include flag" << std::endl;
-				return;
-			}
-			else if(find(NoInc, args[i+1]) == -1) NoInc.push_back(args[i+1]);
-		}
-	}
-	auto it = AddInc.begin();
-	while(it != AddInc.end()){
-		if(find(NoInc, *it) != -1)
-			AddInc.erase(it);
-		else
-			it++;
-	}
-	if(AddInc.size() == 0)
-		s = "-1";
-	else{
-		s = "";
-		for(int i = 0; i < AddInc.size(); ++i)
-			s += (AddInc[i] + " ");
-	}
-}
-void findEntryFile(const std::vector<std::string>& args, std::string& s,
-	const std::string& cd){
-	if(args.size() != 0 && args[0] != "run" && args[0] != "config" && 
-		args[0] != "status" && args[0] != "help" && !isFlag(args[0])){
+	std::vector<std::string> newfUnInc;
+	getNamesAfterFlag(args, "--no-include", newfUnInc);
+	for(int i = 0; i < newfUnInc.size(); ++i)
+		newfUnInc[i] = getFullPath(cd, newfUnInc[i]);
+	fUnInc += newfUnInc;
 
-		std::string mainFile = findFile(args[0], cd);
-		if(mainFile == "-1"){
+	getNamesAfterFlag(args, "--default-include", defInc);
+	for(int i = 0; i < defInc.size(); ++i)
+		defInc[i] = getFullPath(cd, defInc[i]);
+
+	AddInc -= defInc;
+	fUnInc -= defInc;
+
+	AddInc -= fUnInc;
+	fUnInc -= AddInc;
+
+	if(AddInc.size() > 0){
+		parameters[6] = "";
+		for(int i = 0; i < AddInc.size(); ++i)
+			parameters[6] += (AddInc[i] + " ");
+	}
+	else parameters[6] = "-1";
+
+	if(fUnInc.size() > 0){
+		parameters[14] = "";
+		for(int i = 0; i < fUnInc.size(); ++i)
+			parameters[14] += (fUnInc[i] + " ");
+	}
+	else parameters[14] = "-1";
+}
+void findEntryFile(const std::vector<std::string>& args,
+	const std::string& cd, std::vector<std::string>& parameters){
+
+	std::vector<std::string> AddInc, fUnInc;
+	if(parameters[6] != "-1") AddInc = split(parameters[6]);
+	if(parameters[14] != "-1") fUnInc = split(parameters[14]);
+	if(args.size() != 0 && (find(keyWords, args[0]) == -1) && !isFlag(args[0])){
+		std::vector<std::string> mainFile;
+		findFile(mainFile, args[0], cd, AddInc, fUnInc);
+		if(mainFile.size() == 0){
 			std::cout << "================== ERROR ==================" << std::endl;
 			std::cout << "Cannot find file: " << args[0] << std::endl;
+			parameters[0] = "-1";
 			return;
 		}
-		s = mainFile;
+		else if(mainFile.size() > 1){
+			std::cout << "================== ERROR ==================" << std::endl;
+			std::cout << "multiple files matching \"" << args[0] << "\" found:" << std::endl;
+			for(int i = 0; i < mainFile.size(); ++i)
+				std::cout << '\t' << mainFile[i] << std::endl;
+			parameters[0] = "-1";
+			return; 
+		}
+		parameters[0] = mainFile[0];
 	}
 	if(args.size() == 0 || (args.size() != 0 && isFlag(args[0]))){
-		if(s == "-1"){
-			std::string mainFile = findFile("main.cpp", cd);
-			if(mainFile == "-1")
-				mainFile = findFile("main.c", cd);
-			if(mainFile == "-1"){
+		if(parameters[0] == "-1"){
+			std::vector<std::string> mainFile;
+			std::string s0 = "main.cpp";
+			findFile(mainFile, s0, cd, AddInc, fUnInc);
+			if(mainFile.size() == 0) {
+				s0 = "main.c";
+				findFile(mainFile, s0, cd, AddInc, fUnInc);
+			}
+			if(mainFile.size() == 0){
 				std::cout << "================== ERROR ==================" << std::endl;
 				std::cout << "Cannot find entry file" << std::endl;
+				parameters[0] = "-1";
 				return;
 			}
-			s = mainFile;
+			else if(mainFile.size() > 1){
+				std::cout << "================== ERROR ==================" << std::endl;
+				std::cout << "multiple files matching \"" << s0 << "\" found:" << std::endl;
+				for(int i = 0; i < mainFile.size(); ++i)
+					std::cout << '\t' << mainFile[i] << std::endl;
+				parameters[0] = "-1";
+				return; 
+			}
+			parameters[0] = mainFile[0];
 		}
 	}
 }
@@ -189,10 +215,11 @@ void getNameAfterFlag(const std::vector<std::string>& args,
 		s = args[index + 1];
 	}
 }
-void getNamesAfterFlag(std::vector<std::string>& args,
+int getNamesAfterFlag(std::vector<std::string>& args,
 	const std::string& flag,std::vector<std::string>& s){
 
-	if(args.size() == 0) return;
+	int size = 0;
+	if(args.size() == 0) return 0;
 	auto it = args.begin();
 	bool get = false;
 	while(it != args.end()){
@@ -201,68 +228,170 @@ void getNamesAfterFlag(std::vector<std::string>& args,
 			args.erase(it);
 			continue;
 		}
-		if(get && isFlag(*it)) break;
-		if(find(s, *it) == -1 && get) s.push_back(*it);
+		if(get && (isFlag(*it) || find(keyWords, *it) != -1)) get = false;
+		if(get && find(s, *it) == -1){
+			s.push_back(*it);
+			size++;
+		}
 		if(get) args.erase(it);
 		else it++;
 	}
+	return size;
 }
 void FindForceLinkUnlink(std::vector<std::string>& args,
 	std::vector<std::string>& parameters)
 {
+	// Считываение новых имен
 	std::vector<std::string> fLink, fUnlink, defLink;
 	if(parameters[3] != "-1") fLink = split(parameters[3]);
 	if(parameters[4] != "-1") fUnlink = split(parameters[4]);
-	getNamesAfterFlag(args, "--link-force", fLink);
-	getNamesAfterFlag(args, "--no-link-force", fUnlink);
-	getNamesAfterFlag(args, "--default-link", defLink);
-
+	std::vector<std::string> newv;
+	int newfLinkSize = getNamesAfterFlag(args, "--link-force", newv);
+	auto it = args.begin();
+	while(it != args.end()){
+		if((*it).size() > 2 && isFlag(*it) && (*it)[1] == 'l' && (*it) != "-log"){
+			std::string shortname = std::string((*it).begin() + 2, (*it).end());
+			if(find(newv, shortname) == -1) {
+				newv.push_back(shortname);
+				newfLinkSize++;
+			}
+			args.erase(it);
+		}
+		else it++;
+	}
+	int newfUnlinkSize = getNamesAfterFlag(args, "--no-link-force", newv);
+	int newdefLinkSize = getNamesAfterFlag(args, "--default-link", newv);
 	std::vector<std::string> fLibs, fUnLibs, defLibs;
 	if(parameters[2] != "-1") fLibs = split(parameters[2]);
 	if(parameters[13] != "-1") fUnLibs = split(parameters[13]);
 
-	auto it = fLink.begin();
-	while(it != fLink.end()){
-		if(isLib(*it)){
-			std::string shortname = getNameNoExt(*it);
-			shortname = std::string(shortname.begin() + 3, shortname.end());
-			fLibs.push_back(shortname);
-			fLink.erase(it);
+	// Преобразование всех новых имен в полные пути
+	std::vector<std::string> AddInc, fUnInc;
+	if(parameters[6] != "-1") AddInc = split(parameters[6]);
+	if(parameters[14] != "-1") fUnInc = split(parameters[14]);
+	for(int i = 0; i < newv.size(); ++i){
+		if(getExt(newv[i]) != ""){
+			std::vector<std::string> result;
+			findFile(result, newv[i], cd, AddInc, fUnInc);
+			if(result.size() == 0){
+				std::cout << "======================== ERROR ========================" << std::endl;
+				std::cout << "Cannot find file: " << newv[i] << std::endl;
+				std::cout << "You specified it in ";
+				if(i < newfLinkSize) std::cout << "force-link ";
+				else if(i < newfLinkSize + newfUnlinkSize) std::cout << "force-unlink ";
+				else std::cout << "default-link ";
+				std::cout << "list" << std::endl;
+				return;
+			}
+			else if(result.size() > 1){
+				std::cout << "======================== ERROR ========================" << std::endl;
+				std::cout << "multiple files matching \"" << newv[i] << "\" found:" << std::endl;
+				for(int j = 0; j < result.size(); ++j)
+					std::cout << '\t' << result[j] << std::endl;
+				std::cout << "You specified it in ";
+				if(i < newfLinkSize) std::cout << "force-link ";
+				else if(i < newfLinkSize + newfUnlinkSize) std::cout << "force-unlink ";
+				else std::cout << "default-link ";
+				std::cout << "list" << std::endl;
+				return;
+			}
+			newv[i] = result[0];
 		}
-		else
-			it++;
-	}
-	it = fUnlink.begin();
-	while(it != fUnlink.end()){
-		if(isLib(*it)){
-			std::string shortname = getNameNoExt(*it);
-			shortname = std::string(shortname.begin() + 3, shortname.end());
-			fUnLibs.push_back(shortname);
-			fUnlink.erase(it);
+		else{
+			std::vector<std::string> result;
+			if(i < newfLinkSize){
+				findFile(result, ("lib" + newv[i] + ".so"), cd, AddInc, fUnInc);
+				if(result.size() == 0) findFile(result, ("lib" + newv[i] + ".a"), cd, AddInc, fUnInc);
+				if(result.size() == 0){
+					std::cout << "======================== ERROR ========================" << std::endl;
+					std::cout << "Cannot find files lib" << newv[i] << ".so or lib" << newv[i] << ".a" << std::endl;
+					std::cout << "You specified \"" << newv[i] << "\" in force-link list, belder thinks it is a library";
+					return;
+				}
+				else if(result.size() > 1){
+					std::cout << "======================== ERROR ========================" << std::endl;
+					std::cout << "multiple files matching \"" << newv[i] << "\" found:" << std::endl;
+					for(int j = 0; j < result.size(); ++j)
+					std::cout << '\t' << result[j] << std::endl;
+					std::cout << "You specified it in force-link list, belder thinks it is a library" << std::endl;
+					return;
+				}
+				newv[i] = result[0];
+			}
+			else{
+				findFile(result, ("lib" + newv[i] + ".so"), cd, AddInc, fUnInc);
+				findFile(result, ("lib" + newv[i] + ".a"), cd, AddInc, fUnInc);
+				if(result.size() == 0){
+					std::cout << "======================== ERROR ========================" << std::endl;
+					std::cout << "Cannot find files lib" << newv[i] << ".so or lib" << newv[i] << ".a" << std::endl;
+					std::cout << "You specified \"" << newv[i] << "\" in ";
+					if(i < newfLinkSize + newfUnlinkSize) std::cout << "force-unlink ";
+					else std::cout << "default-link ";
+					std::cout << "list, belder thinks it is a library" << std::endl;
+					return;
+				}
+				else if((result.size() > 2) || 
+					(result.size() == 2 && !(getExt(result[0]) == "so" && getExt(result[1]) == "a")))
+				{
+					std::cout << "======================== ERROR ========================" << std::endl;
+					std::cout << "multiple files matching \"" << newv[i] << "\" found:" << std::endl;
+					for(int j = 0; j < result.size(); ++j)
+						std::cout << '\t' << result[j] << std::endl;
+					std::cout << "You specified it in force-link list, belder thinks it is a library" << std::endl;
+					return;
+				}
+				if(result.size() == 1) newv[i] = result[0];
+				else newv[i] = (result[0] + "*" + result[1]);
+			}
 		}
-		else
-			it++;
-	}
-	it = defLink.begin();
-	while(it != defLink.end()){
-		if(isLib(*it)){
-			std::string shortname = getNameNoExt(*it);
-			shortname = std::string(shortname.begin() + 3, shortname.end());
-			defLibs.push_back(shortname);
-			defLink.erase(it);
-		}
-		else
-			it++;
 	}
 
-	it = args.begin();
-	while(it != args.end()){
-		if((*it).size() > 2 && isFlag(*it) && (*it)[1] == 'l' && (*it) != "-log"){
-			fLibs.push_back(std::string((*it).begin() + 2, (*it).end()));
-			args.erase(it);
+	//std::vector<std::string> fLink, fUnlink, defLink;
+	//std::vector<std::string> fLibs, fUnLibs, defLibs;
+
+	for(int i = 0; i < newv.size(); ++i){
+		if(i < newfLinkSize){
+			if(isLib(newv[i])){
+				if(find(fLibs, newv[i]) == -1)
+					fLibs.push_back(newv[i]);
+			}
+			else{
+				if(find(fLink, newv[i]) == -1)
+					fLink.push_back(newv[i]);
+			}
 		}
-		else
-			it++;
+		else if(i < newfLinkSize + newfUnlinkSize){
+			if(isLib(newv[i])){
+				if(newv[i].find("*") != std::string::npos){
+					auto spl = split(newv[i], "*");
+					fUnLibs += spl;
+				}
+				else{
+					if(find(fUnLibs, newv[i]) == -1)
+						fUnLibs.push_back(newv[i]);
+				}
+			}
+			else{
+				if(find(fUnlink, newv[i]) == -1)
+					fUnlink.push_back(newv[i]);
+			}
+		}
+		else{
+			if(isLib(newv[i])){
+				if(newv[i].find("*") != std::string::npos){
+					auto spl = split(newv[i], "*");
+					defLibs += spl;
+				}
+				else{
+					if(find(defLibs, newv[i]) == -1)
+						defLibs.push_back(newv[i]);
+				}
+			}
+			else{
+				if(find(defLink, newv[i]) == -1)
+					defLink.push_back(newv[i]);
+			}
+		}
 	}
 
 	fLink -= defLink;

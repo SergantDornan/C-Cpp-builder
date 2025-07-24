@@ -151,6 +151,7 @@ std::string createEssentials(const bool reb){
 			out << "-1" << std::endl; // 11 Flags to linker
 			out << "-1" << std::endl; // 12 general Flags
 			out << "-1" << std::endl; // 13 force Unlink Libs
+			out << "-1" << std::endl; // 14 force unlink dirs
 			out.close();
 		}
 	}

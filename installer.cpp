@@ -67,18 +67,7 @@ int main(int argc, char* argv[]) {
         std::cout << "This is fatal error, install make before installation" << std::endl;
         return -1;
     }
-    if(exists(root) && !pocket){
-    	std::cout << "====================== ERROR ======================" << std::endl;
-    	std::cout << "Folder: " << root << " already exists" << std::endl;
-        std::cout << "Cannot install builder" << std::endl;
-    	std::cout << "Remove " << root << " before installation" << std::endl;
-        return -1;
-    }
     std::string cmd;
-    if(!pocket){
-        cmd = "mkdir " + root;
-        system(cmd.c_str());
-    }
     std::string output;
     if(pocket) output = pocketOutput;
     else output = standartOutput;
@@ -92,8 +81,22 @@ int main(int argc, char* argv[]) {
             "const std::string root = \"./builder\";");
     if(!pocket) addAlias("belder", root + "/builder");
     cmd = "make -C " + cd + " -j " + std::to_string(numThreads);
-    system(cmd.c_str());
-
+    int code = system(cmd.c_str());
+    if(exists(root) && !pocket && code == 0){
+        std::cout << "====================== ERROR ======================" << std::endl;
+        std::cout << "Folder: " << root << " already exists" << std::endl;
+        std::cout << "Cannot install builder" << std::endl;
+        std::cout << "Remove " << root << " before installation" << std::endl;
+        return -1;
+    }
+    if(!pocket && code == 0){
+        cmd = "mkdir " + root;
+        system(cmd.c_str());
+    }
+    if(code == 0){
+        cmd = "make link -C " + cd + " -j " + std::to_string(numThreads);
+        system(cmd.c_str());
+    }
     rewriteLine(cd + "/source/main.cpp",
         std::string("const std::string SourceCodeFolder = \"" + cd + "\";"),
         "const std::string SourceCodeFolder;");
@@ -102,7 +105,7 @@ int main(int argc, char* argv[]) {
         rewriteLine(cd + "/source/BuilderFilework.cpp",
             "const std::string root = \"./builder\";",
             "const std::string root = getHomedir() + \"/builder\";");
-    if(exists(root + "/builder") || exists("./pocketbuilder"))
+    if(code == 0 && (exists(root + "/builder") || exists("./pocketbuilder")))
         std::cout << "================= Builder has been installed =================" << std::endl;
     return 0;
 }

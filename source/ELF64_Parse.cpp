@@ -8,11 +8,11 @@ void parse64(Elf64_parse_result& result,unsigned char* elf){
     // Чтение Section Header Table
     if (elfHeader -> e_shnum > 0) {
         Elf64_Shdr* sectionHeaders = (Elf64_Shdr*)(elf + elfHeader -> e_shoff);
-        for (size_t i = 0; i < elfHeader -> e_shnum; ++i) {
+        //Поиск секции таблицы символов
+        for(int i = 0; i < elfHeader -> e_shnum; ++i){
             Elf64_Shdr* sH = &sectionHeaders[i];
             if(!correctEndian) swapBytesSectionHeader(sH);
         }
-        //Поиск секции таблицы символов
         for (size_t i = 0; i < elfHeader -> e_shnum; ++i) {
             Elf64_Shdr* sH = &sectionHeaders[i];
             if (sH -> sh_type == 2 || sH -> sh_type == 11) //  2 - тип таблицы символов, 11 - динамических символов
@@ -22,6 +22,7 @@ void parse64(Elf64_parse_result& result,unsigned char* elf){
         std::cout << "=========================== ERROR ===========================" << std::endl;
         std::cout << "ELF64_Parse.cpp" << std::endl;
         std::cout << "File: " << result.name << " has no Section Table (wtf?)" << std::endl;
+        std::cout << "This is very weird, try running belder with -reb flag or with \"clear\" option" << std::endl;
         std::cout << std::endl;
         return;
     }
@@ -51,9 +52,9 @@ void process_symbol_table64(Elf64_parse_result& result, unsigned char* elf,
         // Получить индекс секции, к которой относится символ
         uint16_t symbol_section_index = symbol->st_shndx;
 
-        if((symbol_type == 1 || symbol_type == 2) && symbol_bind != 2){
+        if((symbol_type == 1 || symbol_type == 2) && symbol_bind != 2 && symbol_bind != 0){
             // symbol_type == 1 || symbol_type == 2 - OBJECT or FUNC - функция или переменная
-            // WEAK функции не включаем потому что не прикольно
+            // WEAK и LOCAL не включаем потому что не прикольно
             result.defSyms.push_back(symbol_name);
         }
 

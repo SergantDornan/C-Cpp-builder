@@ -11,6 +11,8 @@
 // И ФЛАГИ, ЧТО И У ФАЙЛОВ (force-link, force-unlink, def-link и тд), ТАКЖЕ СОХРАНЕНО
 // ПРОСТО -laboba, оно попадает в категорию force-link
 // ЕЩЕ ПРО ОПЦИЮ ХЕЛП НАПИСАТЬ
+// Переделать вывод status
+// Вывод логов с мутехами (компиляция + линковка)
 
 
 // Следующая строка заполняется инсталлятором, не менять ее
@@ -30,6 +32,7 @@ const std::string SourceCodeFolder;
 // --compile-flags
 // --clear-flags
 // clean, clear, mrproper - удалить папку с build
+// --no-include чтобы отменить -I флаг или не включать подпапку
 
 // Структура project config:
 // main input
@@ -46,8 +49,10 @@ const std::string SourceCodeFolder;
 // Flags to linker
 // generalFlags
 // force unlink libs
+// force unlink dirs
 
 int main(int argc, char* argv[]){
+
 	if(pocket && !exists(root)){
 		std::string cmd = "mkdir " + root;
 		system(cmd.c_str());
@@ -75,6 +80,10 @@ int main(int argc, char* argv[]){
 	}
 	std::vector<std::string> args;
 	for(int i = 1; i < argc; ++i) args.push_back(std::string(argv[i]));
+	if(args.size() != 0 && args[0] == "help"){
+		printHelp();
+		return 0;
+	}
 	if(args.size() != 0 && args[0] == "uninstall"){
 		uninstall();
 		return 0;
@@ -83,11 +92,20 @@ int main(int argc, char* argv[]){
 		if(!exists(SourceCodeFolder)){
 			std::cout << "===================== ERROR =====================" << std::endl;
 			std::cout << "Cannot find folder with source code, cannot reinstall" << std::endl;
-			std::cout << "=================================================" << std::endl;
+			std::cout << std::endl;
+			std::cout << std::endl;
 			return 1;
 		}
-		if(!pocket) uninstall();
 		std::string cmd;
+		int checkCompileCode = 0;
+		cmd = "make -C " + SourceCodeFolder;
+		if(args.size() > 2 && args[1] == "-j")
+			cmd += (" " + args[1] + " " + args[2]);
+		else
+			cmd += " -j 8";
+		checkCompileCode |= system(cmd.c_str());
+		if(checkCompileCode != 0) return 1;
+		if(!pocket) uninstall();
 		if(!pocket) cmd = "make install -C " + SourceCodeFolder;
 		else cmd = "make pocket -C " + SourceCodeFolder;
 		system(cmd.c_str());
@@ -110,23 +128,28 @@ int main(int argc, char* argv[]){
 	std::string projectConfig = wd + "/" + configFile;
 	std::vector<std::string> parameters = getParameters(args, projectConfig, cd);
 	
+	std::ofstream out(projectConfig);
+	for(int i = 0; i < parameters.size(); ++i) out << parameters[i] << std::endl;
+	out.close();
+
 	if(args.size() != 0 && args[0] == "status"){
 		printStatus(parameters);
 		return 0;
 	}
 
-	std::ofstream out(projectConfig);
-	for(int i = 0; i < parameters.size(); ++i) out << parameters[i] << std::endl;
-	out.close();
 	if(args.size() != 0 && args[0] == "config"){
 		std::cout << "Config updated" << std::endl;
 		return 0;
 	}
-
+	if(parameters[0] == "-1") return 1;
 	std::vector<std::string> allHeaders, allSource, allLibs;
-	getAllheaders(allHeaders,cd,parameters[4]); // fUnlink
-	getAllsource(allSource,cd,parameters[4]); // fUnlink
-	getAllLibs(allLibs,cd,parameters[13]); // fUnLibs
+	std::vector<std::string> fUnIncludeDirs, fUnLib, forceUnlink;
+	if(parameters[4] != "-1") forceUnlink = split(parameters[4]);
+	if(parameters[13] != "-1") fUnLib = split(parameters[13]);
+	if(parameters[14] != "-1") fUnIncludeDirs = split(parameters[14]);
+	getAllheaders(allHeaders,cd,forceUnlink,fUnIncludeDirs);
+	getAllsource(allSource,cd,forceUnlink,fUnIncludeDirs); 
+	getAllLibs(allLibs,cd,fUnLib,fUnIncludeDirs); 
 	if(parameters[6] != "-1"){ // additional -I list
 		auto AddInc = split(parameters[6]);
 		for(int i = 0; i < AddInc.size(); ++i){
@@ -137,34 +160,33 @@ int main(int argc, char* argv[]){
             	std::cout << "if it does write full path to this folder" << std::endl;
             	return 1;
         	} 
-			getAllheaders(allHeaders, AddInc[i], parameters[4]);
-			getAllsource(allSource, AddInc[i], parameters[4]);
-			getAllLibs(allLibs, AddInc[i], parameters[13]);
+			getAllheaders(allHeaders, AddInc[i], forceUnlink,fUnIncludeDirs);
+			getAllsource(allSource, AddInc[i], forceUnlink,fUnIncludeDirs);
+			getAllLibs(allLibs, AddInc[i],fUnLib,fUnIncludeDirs);
 		}
 	}
-
-	std::vector<std::string> includes;
+ 	std::vector<std::string> includes;
 	getIncludes(includes,allHeaders,allSource,parameters[0],true);
 
 	int linkType = 0;
 	if(getName(parameters[1]).size() > 5){
 		std::string name = getName(parameters[1]);
 		std::string prefix(name.begin(), name.begin() + 3);
-		if(prefix == "lib" && getExt(name) == "a")
-			linkType = 1;
+		if(prefix == "lib"){
+			std::string ext = getExt(name); 
+			if(ext == "a") linkType = 1;
+			else if(ext == "so") linkType = 2;
+		}
 	}
-	
 	bool changeSet = createDepfiles(wd, allHeaders, allSource, log);
 	std::vector<std::string> toCompile = compile(wd,parameters,allHeaders,allSource,changeSet,log);
 	std::string linkmsg = link(wd, parameters, includes, toCompile, 
 		log, linkType, relink, idgaf, allLibs);
 	
-	if(linkmsg == "succes" && exists(parameters[1]))
-		std::cout << "============================ SUCCES ============================" << std::endl;
-    else if(linkmsg == "nothing to link" && exists(parameters[1])){
+	if(linkmsg == "success" && exists(parameters[1]))
+		std::cout << "============================ SUCCESS ============================" << std::endl;
+    else if(linkmsg == "nothing to link" && exists(parameters[1]))
     	std::cout << "belder: nothing to link" << std::endl;
-    	std::cout << "================================================================" << std::endl;
-    }
     if(run && exists(parameters[1])){
 		if(linkType == 0){
 			std::string cmd = parameters[1];
@@ -175,9 +197,6 @@ int main(int argc, char* argv[]){
 			std::cout << "Cannot run a library" << std::endl;
 		}
 	}
-
-	if(linkmsg == "nothing to link")
-    	return 10;
-    else
-    	return 0;
+	if(linkmsg == "nothing to link") return 10;
+    else return 0;
 }

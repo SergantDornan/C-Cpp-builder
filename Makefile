@@ -14,7 +14,9 @@ OBJECTS=$(patsubst $(SOURCEDIR)%.cpp, $(deps)%.o, $(CFILES))
 DEPFILES= $(patsubst $(SOURCEDIR)%.cpp, $(deps)%.d, $(CFILES)) $(deps)/installer.d
 INSTALLOBJECTS= $(deps)/installer.o $(deps)/alias.o $(deps)/BuilderFilework.o $(deps)/uninstall.o $(deps)/filework.o $(deps)/algs.o
 
-all:$(OUTPUT)
+all:$(OBJECTS)
+
+link:$(OUTPUT)
 
 pocket:$(INSTALLOUTPUT)
 	@./installer pocket
