@@ -179,6 +179,7 @@ bool createDepfiles(const std::string& wd,
 	//Проход по dep файлам:
 
     // Удаление лишних деп файлов и объектников у сурс файлов
+    std::string cmd = "rm";
 	for(int i = 1; i < dirs.size(); ++i){
 		std::ifstream file(dirs[i]);
 		if(!file.is_open()){
@@ -192,11 +193,10 @@ bool createDepfiles(const std::string& wd,
 		}
 		std::string line;
 		std::getline(file, line);
-		if(!exists(line)){
+		if(find(allSource, line) == -1){
 			changeSet = true;
 			std::string objFile = wd + "/" + reqFolders[1] + "/" + subFolders[1] + "/" + getName(dirs[i]) + ".o";
-			std::string cmd = "rm " + dirs[i] + " " + objFile;
-			system(cmd.c_str());
+			cmd += (" " + dirs[i] + " " + objFile);
 		}
 		file.close();
 	}
@@ -217,22 +217,20 @@ bool createDepfiles(const std::string& wd,
 		}
 		std::string line;
 		std::getline(file, line);
-		if(!exists(line)){
+		if(find(allHeaders, line) == -1){
 			changeSet = true;
-			std::string cmd = "rm " + dirs[i];
-			system(cmd.c_str());
+			cmd = (" " + dirs[i]);
 		}
 		file.close();
 	}
+    if(cmd != "rm") system(cmd.c_str());
 
-	if(log)
-		std::cout << std::endl;
 	// Проход по хедерам и сурс файлам
 	for(int i = 0; i < allHeaders.size(); ++i){
 		std::string file = wd + "/" + reqFolders[0] + "/" + subFolders[0] + "/" + converPathToName(allHeaders[i]);
 		if(!exists(file)){
 			changeSet = true;
-			std::string cmd = "touch " + file;
+			cmd = "touch " + file;
 			system(cmd.c_str());
 			std::ofstream newfile(file);
 			newfile << allHeaders[i] << std::endl;
@@ -245,7 +243,7 @@ bool createDepfiles(const std::string& wd,
 		std::string file = bd + "/" + subFolders[0] + "/" + converPathToName(allSource[i]);
 		if(!exists(file)){
 			changeSet = true;
-			std::string cmd = "touch " + file;
+			cmd = "touch " + file;
 			system(cmd.c_str());
 			std::ofstream newfile(file);
 			newfile << allSource[i] << std::endl;
@@ -257,4 +255,62 @@ bool createDepfiles(const std::string& wd,
 }
 
 
+void rebuildForSharedLib(const std::string& n1, const std::string& n2,
+    const std::string& wd){
 
+    auto isSharedLib = [](const std::string& s0){
+        std::string s = getName(s0);
+        if(s.size() < 4) return false;
+        if(std::string(s.begin(), s.begin() + 3) != "lib") return false;
+        if(getExt(s) != "so") return false;
+        return true;
+    };
+
+    if((!isSharedLib(n1) && isSharedLib(n2)) || 
+        (isSharedLib(n1) && !isSharedLib(n2)))
+    {
+        std::string dir = wd + "/" + reqFolders[1] + "/" + subFolders[0];
+        std::string cmd = "rm -rf";
+        auto dirs = getDirs(dir);
+        for(int i = 1; i < dirs.size(); ++i)
+            cmd += (" " + dirs[i]);
+        system(cmd.c_str());
+    }
+}
+
+// Структура файла с символами:
+// Само имя: converPathToName(path) + ".sym"
+// путь к файлу на который ссылается (объектник или библиотека)
+// дата изменения файла на который ссылается
+// Число callSyms
+// Число defSyms
+// callSyms
+// defSyms
+
+void updateSymfiles(const std::string& wd, const std::vector<std::string>& allLibs){
+
+    auto isLib = [](const std::string& s0){
+        std::string s = getName(s0);
+        if(s.size() < 4) return false;
+        if(std::string(s.begin(), s.begin() + 3) != "lib") return false;
+        if(getExt(s) != "a" && getExt(s) != "so") return false;
+        return true;
+    };
+
+    auto allObj = getDirs(wd + "/" + reqFolders[1] + "/" + subFolders[1]);
+    auto dirs = getDirs(wd + "/" + reqFolders[2]);
+    std::string cmd = "rm";
+    for(int i = 1; i < dirs.size(); ++i){
+        std::ifstream file(dirs[i]);
+        std::string path, changeTime;
+        std::getline(file, path);
+        std::getline(file, changeTime);
+        file.close();
+        bool del = false;
+        if(isLib(path)) del |= (find(allLibs, path) == -1);
+        else del |= (find(allObj, path) == -1);
+        if(!del) del |= (getChangeTime(path) != changeTime);
+        if(del) cmd += (" " + dirs[i]);
+    }
+    if(cmd != "rm") system(cmd.c_str());
+}

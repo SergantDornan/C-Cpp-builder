@@ -4,6 +4,6 @@
 #include "ELFparser.h"
 #include "algs.h"
 
-binFile parse_ARLIB(const std::string&);
+void parse_ARLIB(binFile&);
 
 #endif

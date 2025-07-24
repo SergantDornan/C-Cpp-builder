@@ -10,7 +10,7 @@ std::mutex mtx;
 std::vector<std::string> compile(const std::string& wd,const std::vector<std::string>& parameters,
     const std::vector<std::string>& allHeaders, 
     const std::vector<std::string>& allSource,
-    const bool changeSet, const bool log){
+    const bool changeSet, const bool log, const int linkType){
 
     std::vector<std::string> incDirs, toCompile;
     for(int i = 0; i < allHeaders.size();++i){
@@ -21,20 +21,6 @@ std::vector<std::string> compile(const std::string& wd,const std::vector<std::st
     std::string id = wd + "/" + reqFolders[0];
     auto HDdirs = getDirs(id + "/" + subFolders[0]);
     auto SDdirs = getDirs(bd + "/" + subFolders[0]);
-    auto objects = getDirs(bd + "/" + subFolders[1]);
-    for(int i = 1; i < objects.size(); ++i){
-        bool found = false;
-        for(int j = 0; j < allSource.size(); ++j){
-            if(converPathToName(allSource[j]) == getNameNoExt(objects[i])){
-                found = true;
-                break;
-            }
-        }
-        if(!found){
-            std::string rmcmd = "rm " + objects[i];
-            system(rmcmd.c_str());
-        }
-    }
     //Обновления списка зависимостей
     int code = 0;
     if(changeSet) code = UpdateDependencies(HDdirs, SDdirs, bd, id, allHeaders, allSource);
@@ -51,7 +37,7 @@ std::vector<std::string> compile(const std::string& wd,const std::vector<std::st
     for (int i = 0; i < multiCompile.size(); ++i)
         threads.push_back(std::thread(oneThreadCompile, 
             std::ref(multiCompile[i]),
-            std::ref(incDirs), std::ref(bd),log,std::ref(parameters)));
+            std::ref(incDirs), std::ref(bd),log,std::ref(parameters), linkType));
     for (auto& thread : threads) {
         if (thread.joinable())
             thread.join(); 
@@ -62,7 +48,7 @@ std::vector<std::string> compile(const std::string& wd,const std::vector<std::st
 
 void compileFile(const std::string& path, 
     const std::vector<std::string>& incDirs,const std::string& bd, const bool log,
-    const std::vector<std::string>& parameters){
+    const std::vector<std::string>& parameters, const int linkType){
 
     std::vector<std::string> depfile;
     std::string line;
@@ -95,6 +81,7 @@ void compileFile(const std::string& path,
     
     if(getExt(depfile[0]) == "cpp" || getExt(depfile[0]) == "c") cmd = compiler;
     else cmd = compiler + "-x assembler-with-cpp ";
+    if(linkType == 2) cmd += "-fPIC ";
     for(int i = 7; i <= 10; ++i) // разные флаги + флаги конкретно компилятору
         if(parameters[i] != "-1") cmd += (parameters[i] + " "); 
     if(parameters[12] != "-1") cmd += (parameters[12] + " "); // general flags
@@ -116,8 +103,8 @@ void compileFile(const std::string& path,
 }
 void oneThreadCompile(const std::vector<std::string>& toCompile, 
     const std::vector<std::string>& incDirs,const std::string& bd,const bool log,
-    const std::vector<std::string>& parameters){
+    const std::vector<std::string>& parameters, const int linkType){
 
     for(int i = 0; i < toCompile.size(); ++i) 
-        compileFile(toCompile[i],incDirs,bd,log,parameters);
+        compileFile(toCompile[i],incDirs,bd,log,parameters,linkType);
 }

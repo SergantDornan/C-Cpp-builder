@@ -1,8 +1,8 @@
 #include "ARparse.h"
 
-binFile parse_ARLIB(const std::string& path){
-	std::ifstream file(path, std::ios::binary);
-    unsigned long size = getFileSize(path);
+void parse_ARLIB(binFile& newfile){
+	std::ifstream file(newfile.name, std::ios::binary);
+    unsigned long size = getFileSize(newfile.name);
     unsigned char* ar = new unsigned char[size];
     file.read((char*)ar, size);
     file.close();
@@ -21,26 +21,24 @@ binFile parse_ARLIB(const std::string& path){
     isAR = !isAR;
     if(!isAR){
     	std::cout << "==================================== ERROR ====================================" << std::endl;
-        std::cout << "belder thinks that file: " << path << std::endl;
+        std::cout << "belder thinks that file: " << newfile.name << std::endl;
         std::cout << "is an AR (static lib) file but it is not" << std::endl;
         std::cout << "try running belder with -reb flag or with \"clear\" option" << std::endl;
         std::cout << "or maybe you specified some strange file in force link section" << std::endl;
         std::cout << std::endl;
-    	binFile dummy = {"dummy"};
-		return dummy;
+    	return;
     }
-    binFile result = {path};
     unsigned char* ptr = ar;
     unsigned char* endptr = ar + size;
     while(ptr != endptr){
         bool isElf = (uint8_t(*ptr) == 127 && uint8_t(*(ptr+1)) == 'E' && uint8_t(*(ptr+2)) == 'L' && uint8_t(*(ptr+3)) == 'F');
         if(isElf){
-            binFile newfile = parseELF(ptr);
-            result.callSyms += newfile.callSyms;
-            result.defSyms += newfile.defSyms;
+            binFile parseFile; 
+            parseELF(ptr,parseFile);
+            newfile.callSyms += parseFile.callSyms;
+            newfile.defSyms += parseFile.defSyms;
         }
         ptr++;
     }
     delete[] ar;
-    return result;
 }

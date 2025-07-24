@@ -6,14 +6,11 @@
 #include "uninstall.h"
 #include "StatusCheck.h"
 
-// ИЗМЕНЕНИЯ В РИДМИ:
-// УКАЗАТЬ ПРО БИБЛИОТЕКИ, ЧТО ОНИ ТОЖЕ ПАРСЯТСЯ, ЧТО У НИХ ТЕПЕРЬ ТЕ ЖЕ ПРАВИЛА
-// И ФЛАГИ, ЧТО И У ФАЙЛОВ (force-link, force-unlink, def-link и тд), ТАКЖЕ СОХРАНЕНО
-// ПРОСТО -laboba, оно попадает в категорию force-link
-// ЕЩЕ ПРО ОПЦИЮ ХЕЛП НАПИСАТЬ
-// Переделать вывод status
-// Вывод логов с мутехами (компиляция + линковка)
+// Сделать файлы хуяйлы
+// Проверить удаление деп файлов и объектников при удалении самого файла 
+// (не только при удалении, но и при попадании в --no-link-force)
 
+// Проверка удаления при удалении + при изменении (библ + файл)
 
 // Следующая строка заполняется инсталлятором, не менять ее
 const std::string SourceCodeFolder;
@@ -124,10 +121,24 @@ int main(int argc, char* argv[]){
 	bool idgaf = (find(args, "--idgaf") != -1);
 	bool relink = (find(args, "--no-link-force") != -1 || find(args, "--link-force") != -1 ||
 		find(args, "--default-link") != -1 || find(args, "--relink") != -1 || find(args, "-rel") != -1);
+	for(int i = 0; i < args.size(); ++i){
+		if(args[i].size() > 2 && args[i][0] == '-' && args[i][1] == 'l' && args[i] != "-log"){
+			relink = true;
+			break;
+		}
+	}
 	std::string wd = createEssentials(rebuild);
 	std::string projectConfig = wd + "/" + configFile;
+	std::string prOutName;
+	std::ifstream f(projectConfig);
+	std::getline(f, prOutName);
+	std::getline(f, prOutName);
+	f.close();
 	std::vector<std::string> parameters = getParameters(args, projectConfig, cd);
-	
+	rebuildForSharedLib(prOutName, parameters[1], wd);
+	if(prOutName != parameters[1]) relink = true;
+
+
 	std::ofstream out(projectConfig);
 	for(int i = 0; i < parameters.size(); ++i) out << parameters[i] << std::endl;
 	out.close();
@@ -179,7 +190,8 @@ int main(int argc, char* argv[]){
 		}
 	}
 	bool changeSet = createDepfiles(wd, allHeaders, allSource, log);
-	std::vector<std::string> toCompile = compile(wd,parameters,allHeaders,allSource,changeSet,log);
+	std::vector<std::string> toCompile = compile(wd,parameters,allHeaders,allSource,changeSet,log,linkType);
+	updateSymfiles(wd, allLibs);
 	std::string linkmsg = link(wd, parameters, includes, toCompile, 
 		log, linkType, relink, idgaf, allLibs);
 	

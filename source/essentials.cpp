@@ -165,7 +165,7 @@ std::string createEssentials(const bool reb){
 			std::string cmd = "mkdir " + subFolder + "/" + subFolders[0];
 			system(cmd.c_str());
 		}
-		else if(i != 0){
+		else if(i == 1){
 			bool rebuildSubFolder = false;
 			for(int j = 0; j < subFolders.size(); ++j){
 				if(find(innerDirNames, subFolders[j]) == -1){

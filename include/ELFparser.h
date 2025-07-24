@@ -11,7 +11,7 @@ typedef struct {
 	std::vector<std::string> defSyms;
 } binFile;
 
-binFile parse_ELF_File(const std::string&);
-binFile parseELF(unsigned char*, const std::string& name = "dummy");
+void parse_ELF_File(binFile&);
+void parseELF(unsigned char*, binFile&);
 
 #endif

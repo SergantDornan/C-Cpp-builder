@@ -4,8 +4,8 @@ const std::string root = getHomedir() + "/builder";
 const std::string cd = cwd();
 const bool pocket = (root == "./builder");
 const std::string configFile = "config";
-const std::vector<std::string> reqFolders = {"headers","source"}; // Если меньше двух имен - будет SegFault
-const std::vector<std::string> subFolders = {"deps", "objects"}; // Если меньше двух имен - будет SegFault
+const std::vector<std::string> reqFolders = {"headers","source","sym"}; // Если меньше двух имен - будет SegFault
+const std::vector<std::string> subFolders = {"deps", "objects"}; // Если меньше трех имен - будет SegFault
 
 std::string converPathToName(const std::string& path, const char ch){
     std::string result = path;
