@@ -3,42 +3,9 @@
 #include "alias.h"
 #include <thread>
 
-void rewriteLine(const std::string& path, 
-    const std::string& oldLine, const std::string& newLine)
-{
-    std::vector<std::string> lines;
-    std::string line;
-    std::ifstream input(path);
-    if(!input.is_open()){
-        std::cout << "================= ERROR =================" << std::endl;
-        std::cout << "installer.cpp: rewriteLine: cannot open file: " << std::endl;
-        std::cout << path << std::endl;
-        std::cout << "=========================================" << std::endl;
-        return;
-    }
-    while(std::getline(input, line))
-        lines.push_back(line);
-    input.close();
-    for(int i = 0; i < lines.size(); ++i){
-        if(lines[i] == oldLine){
-            lines[i] = newLine;
-            break;
-        }
-    }
-    std::ofstream out(path);
-    for(int i = 0; i < lines.size(); ++i)
-        out << lines[i] << std::endl;
-    out.close();
-}
-
 std::string standartOutput;
 const std::string pocketOutput = "OUTPUT=./pocketbuilder";
 const size_t numThreads = std::thread::hardware_concurrency();
-bool checkProgram(const std::string& programName) {
-    std::string command = "which " + programName + " > /dev/null 2>&1";
-    int result = system(command.c_str());
-    return result == 0;
-}
 int main(int argc, char* argv[]) {
     std::string standartOutput = "OUTPUT=" + root + "/builder";
     bool pocket = false;

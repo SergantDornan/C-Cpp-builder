@@ -146,11 +146,22 @@ int main(int argc, char* argv[]){
 		std::cout << "Config updated" << std::endl;
 		return 0;
 	}
+	int linkType = 0;
+	if(getName(parameters[1]).size() > 5){
+		std::string name = getName(parameters[1]);
+		std::string prefix(name.begin(), name.begin() + 3);
+		if(prefix == "lib"){
+			std::string ext = getExt(name); 
+			if(ext == "a") linkType = 1;
+			else if(ext == "so") linkType = 2;
+		}
+	}
 	if(parameters[0] == "-1") return 1;
 	std::vector<std::string> allHeaders, allSource, allLibs;
 	std::vector<std::string> fUnIncludeDirs, fUnLib, forceUnlink;
 	if(parameters[4] != "-1") forceUnlink = split(parameters[4]);
 	if(parameters[13] != "-1") fUnLib = split(parameters[13]);
+	if(linkType == 1 || linkType == 2) fUnLib.push_back(parameters[1]);
 	if(parameters[14] != "-1") fUnIncludeDirs = split(parameters[14]);
 	getAllheaders(allHeaders,cd,forceUnlink,fUnIncludeDirs);
 	getAllsource(allSource,cd,forceUnlink,fUnIncludeDirs); 
@@ -167,22 +178,12 @@ int main(int argc, char* argv[]){
         	} 
 			getAllheaders(allHeaders, AddInc[i], forceUnlink,fUnIncludeDirs);
 			getAllsource(allSource, AddInc[i], forceUnlink,fUnIncludeDirs);
-			getAllLibs(allLibs, AddInc[i],fUnLib,fUnIncludeDirs);
+			getAllLibs(allLibs,AddInc[i],fUnLib,fUnIncludeDirs);
 		}
 	}
  	std::vector<std::string> includes;
 	getIncludes(includes,allHeaders,allSource,parameters[0],true);
 
-	int linkType = 0;
-	if(getName(parameters[1]).size() > 5){
-		std::string name = getName(parameters[1]);
-		std::string prefix(name.begin(), name.begin() + 3);
-		if(prefix == "lib"){
-			std::string ext = getExt(name); 
-			if(ext == "a") linkType = 1;
-			else if(ext == "so") linkType = 2;
-		}
-	}
 	bool changeSet = createDepfiles(wd, allHeaders, allSource, log);
 	std::vector<std::string> toCompile = compile(wd,parameters,allHeaders,allSource,changeSet,log,linkType);
 	updateSymfiles(wd, allLibs);
