@@ -63,10 +63,10 @@ int main(int argc, char* argv[]){
 	if(cd.find(' ') != std::string::npos || 
 		cd.find('(') != std::string::npos ||
 		cd.find(')') != std::string::npos){
-		std::cout << "================== ERROR ==================" << std::endl;
-		std::cout << "Current directory has forbidden characters in it: " << std::endl;
-		std::cout << cd << std::endl;
-		std::cout << "Shell will not understeand you while compiling" << std::endl;
+		std::cerr << "================== ERROR ==================" << std::endl;
+		std::cerr << "Current directory has forbidden characters in it: " << std::endl;
+		std::cerr << cd << std::endl;
+		std::cerr << "Shell will not understeand you while compiling" << std::endl;
 		return 1;
 	}
 	std::vector<std::string> args;
@@ -81,10 +81,10 @@ int main(int argc, char* argv[]){
 	}
 	if(args.size() != 0 && args[0] == "reinstall"){
 		if(!exists(SourceCodeFolder)){
-			std::cout << "===================== ERROR =====================" << std::endl;
-			std::cout << "Cannot find folder with source code, cannot reinstall" << std::endl;
-			std::cout << std::endl;
-			std::cout << std::endl;
+			std::cerr << "===================== ERROR =====================" << std::endl;
+			std::cerr << "Cannot find folder with source code, cannot reinstall" << std::endl;
+			std::cerr << std::endl;
+			std::cerr << std::endl;
 			return 1;
 		}
 		std::string cmd;
@@ -169,10 +169,11 @@ int main(int argc, char* argv[]){
 		auto AddInc = split(parameters[6]);
 		for(int i = 0; i < AddInc.size(); ++i){
 			if(!std::filesystem::is_directory(AddInc[i]) || !exists(AddInc[i])){
-            	std::cout << "========================== ERROR ==========================" << std::endl;
-            	std::cout << "Additional directory: " << AddInc[i] << std::endl;
-            	std::cout << "does not exists" << std::endl;
-            	std::cout << "if it does write full path to this folder" << std::endl;
+            	std::cerr << "========================== ERROR ==========================" << std::endl;
+            	std::cerr << "Additional directory: " << AddInc[i] << std::endl;
+            	std::cerr << "does not exists" << std::endl;
+            	std::cerr << "if it does write full path to this folder" << std::endl;
+            	std::cerr << std::endl;
             	return 1;
         	} 
 			getAllheaders(allHeaders, AddInc[i], forceUnlink,fUnIncludeDirs);
@@ -199,8 +200,9 @@ int main(int argc, char* argv[]){
 			system(cmd.c_str());
 		}
 		else{
-			std::cout << "================= ERROR =================" << std::endl;
-			std::cout << "Cannot run a library" << std::endl;
+			std::cerr << "================= ERROR =================" << std::endl;
+			std::cerr << "Cannot run a library" << std::endl;
+			std::cerr << std::endl;
 		}
 	}
 	if(linkmsg == "nothing to link") return 10;

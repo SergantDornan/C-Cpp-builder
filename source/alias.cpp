@@ -19,18 +19,18 @@ std::string getLine(const std::string& config, const std::string& alias,
 void addAlias(const std::string& alias, const std::string& cmd){
 	std::vector<std::string> config = findConfig();
 	if(config.size() == 0){
-		std::cout << "======================= ERROR =======================" << std::endl;
-		std::cout << "alias.cpp: addAlias: cannot find config file " << std::endl;
-		std::cout << "probably does not work for your system" << std::endl;
-		std::cout << "cannot add alias" << std::endl;
+		std::cerr << "======================= ERROR =======================" << std::endl;
+		std::cerr << "alias.cpp: addAlias: cannot find config file " << std::endl;
+		std::cerr << "probably does not work for your system" << std::endl;
+		std::cerr << "cannot add alias" << std::endl;
 		return;
 	}
 	for(int i = 0; i < config.size(); ++i){
 		std::string line = getLine(config[i], alias, cmd);
 		if(line == "-1"){
-			std::cout << "======================= ERROR =======================" << std::endl;
-			std::cout << "alias.cpp: addAlias: some error in: " << std::endl;
-			std::cout << "alias.cpp: getLine" << std::endl;
+			std::cerr << "======================= ERROR =======================" << std::endl;
+			std::cerr << "alias.cpp: addAlias: some error in: " << std::endl;
+			std::cerr << "alias.cpp: getLine" << std::endl;
 			return;
 		}
 		std::ifstream in(config[i]);
@@ -52,18 +52,18 @@ void addAlias(const std::string& alias, const std::string& cmd){
 void removeAlias(const std::string& alias, const std::string& cmd){
 	std::vector<std::string> config = findConfig();
 	if(config.size() == 0){
-		std::cout << "======================= ERROR =======================" << std::endl;
-		std::cout << "alias.cpp: removeAlias: cannot find config file " << std::endl;
-		std::cout << "probably does not work for your system" << std::endl;
-		std::cout << "cannot remove alias" << std::endl;
+		std::cerr << "======================= ERROR =======================" << std::endl;
+		std::cerr << "alias.cpp: removeAlias: cannot find config file " << std::endl;
+		std::cerr << "probably does not work for your system" << std::endl;
+		std::cerr << "cannot remove alias" << std::endl;
 		return;
 	}
 	for(int i = 0; i < config.size(); ++i){
 		std::string line = getLine(config[i], alias, cmd);
 		if(line == "-1"){
-			std::cout << "======================= ERROR =======================" << std::endl;
-			std::cout << "alias.cpp: removeAlias: some error in: " << std::endl;
-			std::cout << "alias.cpp: getLine" << std::endl;
+			std::cerr << "======================= ERROR =======================" << std::endl;
+			std::cerr << "alias.cpp: removeAlias: some error in: " << std::endl;
+			std::cerr << "alias.cpp: getLine" << std::endl;
 			return;
 		}
     	std::string l;

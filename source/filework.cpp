@@ -8,11 +8,11 @@ std::string getFullPath(std::string cd, std::string relpath){
     while(relpath.size() >= 3 && relpath[0] == '.' && relpath[1] == '.' && relpath[2] == '/'){
         b = true;
         if(getFolder(cd) == ""){
-            std::cout << "======================== ERROR ========================" << std::endl;
-            std::cout << "filework.cpp: cannot convert relative path to full path" << std::endl;
-            std::cout << "Current directory: " << cd << std::endl;
-            std::cout << "relative path: " << relpath << std::endl;
-            std::cout << std::endl;
+            std::cerr << "======================== ERROR ========================" << std::endl;
+            std::cerr << "filework.cpp: cannot convert relative path to full path" << std::endl;
+            std::cerr << "Current directory: " << cd << std::endl;
+            std::cerr << "relative path: " << relpath << std::endl;
+            std::cerr << std::endl;
             return "-1";
         }
         cd = getFolder(cd);
@@ -75,9 +75,9 @@ std::string cwd(){
         return cwd0;
     } 
     else {
-        std::cout << "==================== ERROR ====================" << std::endl;
-        std::cout << "====== some error in filework.cpp : std::string cwd() ======";
-        std::cout << std::endl;
+        std::cerr << "==================== ERROR ====================" << std::endl;
+        std::cerr << "====== some error in filework.cpp : std::string cwd() ======";
+        std::cerr << std::endl;
         return "";
     }
 }
@@ -97,12 +97,20 @@ extern void clear(std::string& path){
 }
 std::vector<std::string> getDirs(const std::string &path) {
 	std::vector<std::string> dirs;
+    if(!exists(path)){
+        std::cerr << "======================= ERROR =======================" << std::endl;
+        std::cerr << "filework.cpp: getDirs" << std::endl;
+        std::cerr << "path does not exists" << std::endl;
+        std::cerr << path << std::endl;
+        std::cerr << std::endl;
+        return dirs;
+    }
 	if(!std::filesystem::is_directory(path)){
-		std::cout << "======================= ERROR =======================" << std::endl;
-		std::cout << "=============== filework.cpp: getDirs ===============" << std::endl;
-		std::cout << "path leads to a file, not directory" << std::endl;
-		std::cout << path << std::endl;
-		std::cout << "=====================================================" << std::endl;
+		std::cerr << "======================= ERROR =======================" << std::endl;
+		std::cerr << "filework.cpp: getDirs" << std::endl;
+		std::cerr << "path leads to a file, not directory" << std::endl;
+		std::cerr << path << std::endl;
+        std::cerr << std::endl;
 		return dirs;
 	}
   std::string back = path;
@@ -124,9 +132,9 @@ std::string getHomedir(){
     if (homeDir) {
         return homeDir;
     } else {
-        std::cout << "======================== ERROR ========================" << std::endl;
-        std::cout << "==== some error in filework.cpp: getHomedir() ====" << std::endl;
-        std::cout << std::endl;      
+        std::cerr << "======================== ERROR ========================" << std::endl;
+        std::cerr << "filework.cpp: getHomedir(): cannot get env var" << std::endl;
+        std::cerr << std::endl;      
         return "";
     }
 }
@@ -138,18 +146,18 @@ void appendToFile(const std::string& path, const std::string& s){
         out.close();
     }
     else{
-        std::cout << "============================ ERROR ============================" << std::endl;
-        std::cout << "======= filework.cpp: appendToFile() ======" << std::endl;
-        std::cout << "Cannot open file: " << path << std::endl;
-        std::cout << std::endl;
+        std::cerr << "============================ ERROR ============================" << std::endl;
+        std::cerr << "filework.cpp: appendToFile()" << std::endl;
+        std::cerr << "Cannot open file: " << path << std::endl;
+        std::cerr << std::endl;
     }
 }
 std::string formatTime(time_t timestamp) {
     std::tm *timeInfo = localtime(&timestamp);
     if (timeInfo == nullptr) {
-        std::cout << "===================== ERROR =====================" << std::endl;
-        std::cout << "====== filework.cpp: formatTime() - some error idn ======" << std::endl;
-        std::cout << std::endl;
+        std::cerr << "===================== ERROR =====================" << std::endl;
+        std::cerr << "filework.cpp: formatTime() - some error idk" << std::endl;
+        std::cerr << std::endl;
         return "";
     }
     std::stringstream ss;
@@ -160,10 +168,10 @@ std::string getChangeTime(const std::string& path){
     const char *filename = path.c_str();
     struct stat fileInfo;
     if (stat(filename, &fileInfo) != 0) {
-        std::cout << "===================== ERROR =====================" << std::endl;
-        std::cout << "====== filework.cpp: getChangeTime() ======" << std::endl;
-        std::cout << "Error getting file information: " << filename << std::endl;
-        std::cout << std::endl;
+        std::cerr << "===================== ERROR =====================" << std::endl;
+        std::cerr << "filework.cpp: getChangeTime()" << std::endl;
+        std::cerr << "Error getting file information: " << filename << std::endl;
+        std::cerr << std::endl;
         return "";
     }
     time_t modificationTime = fileInfo.st_mtime;
@@ -223,10 +231,10 @@ void rewriteLine(const std::string& path,
     std::string line;
     std::ifstream input(path);
     if(!input.is_open()){
-        std::cout << "================= ERROR =================" << std::endl;
-        std::cout << "installer.cpp: rewriteLine: cannot open file: " << std::endl;
-        std::cout << path << std::endl;
-        std::cout << "=========================================" << std::endl;
+        std::cerr << "================= ERROR =================" << std::endl;
+        std::cerr << "installer.cpp: rewriteLine: cannot open file: " << std::endl;
+        std::cerr << path << std::endl;
+        std::cerr << std::endl;
         return;
     }
     while(std::getline(input, line))

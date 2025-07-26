@@ -78,10 +78,10 @@ std::string createEssentials(const bool reb){
 			index = s[1];
 			std::string folder = root + "/" + index;
 			if(!exists(folder)){
-				std::cout << "================= FATAL ERROR =================" << std::endl;
-				std::cout << "Main config file is corrupted and it is probably your fault" << std::endl;
-				std::cout << "rebuilding all projects and configs" << std::endl;
-				std::cout << std::endl;
+				std::cerr << "================= FATAL ERROR =================" << std::endl;
+				std::cerr << "Main config file is corrupted and it is probably your fault" << std::endl;
+				std::cerr << "rebuilding all projects and configs" << std::endl;
+				std::cerr << std::endl;
 				std::string cmd = "rm " + configPath;
 				system(cmd.c_str());
 				return createEssentials(false);

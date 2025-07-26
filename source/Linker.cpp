@@ -63,11 +63,11 @@ std::vector<std::string> toLinkList(const std::vector<std::string>& parameters,
 			}
 		}
 		if(index == -1){
-			std::cout << "====================== ERROR ======================" << std::endl;
-			std::cout << "Cannot find file: " << fLink[i] << std::endl;
-			std::cout << "You specified this file as force link" << std::endl;
-			std::cout << "You can add directories with -I flag" << std::endl;
-			std::cout << "===================================================" << std::endl;
+			std::cerr << "====================== ERROR ======================" << std::endl;
+			std::cerr << "Cannot find file: " << fLink[i] << std::endl;
+			std::cerr << "You specified this file as force link" << std::endl;
+			std::cerr << "You can add directories with -I flag" << std::endl;
+			std::cerr << std::endl;
 			return std::vector<std::string>{};
 		}
 		if(find(toLink, filesInfo[index].name) == -1) toLink.push_back(filesInfo[index].name);
@@ -82,11 +82,11 @@ std::vector<std::string> toLinkList(const std::vector<std::string>& parameters,
 			}
 		}
 		if(index == -1){
-			std::cout << "====================== ERROR ======================" << std::endl;
-			std::cout << "Cannot find file: " << forceLinkLibs[i] << std::endl;
-			std::cout << "You specified this file as force link" << std::endl;
-			std::cout << "You can add directories with -I flag" << std::endl;
-			std::cout << "===================================================" << std::endl;
+			std::cerr << "====================== ERROR ======================" << std::endl;
+			std::cerr << "Cannot find file: " << forceLinkLibs[i] << std::endl;
+			std::cerr << "You specified this file as force link" << std::endl;
+			std::cerr << "You can add directories with -I flag" << std::endl;
+			std::cerr << "===================================================" << std::endl;
 			return std::vector<std::string>{};
 		}
 		if(find(toLink, filesInfo[index].name) == -1) toLink.push_back(filesInfo[index].name);
@@ -100,24 +100,24 @@ std::vector<std::string> toLinkList(const std::vector<std::string>& parameters,
 		for(int j = i + 1; j < binLink.size(); ++j){
 			for(int h = 0; h < binLink[j].defSyms.size(); ++h){
 				if(find(binLink[i].defSyms, binLink[j].defSyms[h]) != -1){
-					std::cout << "=================== ERROR ===================" << std::endl;
-					std::cout << "multiple definition of symbol: " << std::endl;
-					std::cout << binLink[j].defSyms[h] << std::endl;
-					std::cout << std::endl;
+					std::cerr << "=================== ERROR ===================" << std::endl;
+					std::cerr << "multiple definition of symbol: " << std::endl;
+					std::cerr << binLink[j].defSyms[h] << std::endl;
+					std::cerr << std::endl;
 					std::ifstream file(wd + "/" + reqFolders[1] + "/" + subFolders[0] + "/" + getNameNoExt(binLink[i].name));
 					std::string line;
 					std::getline(file, line);
 					file.close();
-					std::cout << "First definition in file: " << getName(line) <<  std::endl;
+					std::cerr << "First definition in file: " << getName(line) <<  std::endl;
 					std::ifstream file1(wd + "/" + reqFolders[1] + "/" + subFolders[0] + "/" + getNameNoExt(binLink[j].name));
 					std::getline(file1, line);
 					file1.close();
-					std::cout << "Second definition in file: " << getName(line) << std::endl;
-					std::cout << std::endl;
-					std::cout << "You can choose not to link files forcibly by using the flag: --no-link-force [filename]" << std::endl;
-					std::cout << "Or you can run builder with --idgaf flag to ignore this error" << std::endl;
-					std::cout << std::endl;
-					std::cout << std::endl;
+					std::cerr << "Second definition in file: " << getName(line) << std::endl;
+					std::cerr << std::endl;
+					std::cerr << "You can choose not to link files forcibly by using the flag: --no-link-force [filename]" << std::endl;
+					std::cerr << "Or you can run builder with --idgaf flag to ignore this error" << std::endl;
+					std::cerr << std::endl;
+					std::cerr << std::endl;
 					return std::vector<std::string>{};
 				}
 			}
@@ -172,25 +172,25 @@ int findLinks(std::vector<std::string>& toLink, const std::vector<binFile>& file
 				if(syms.find(file.callSyms[i]) != syms.end() &&
 					syms[file.callSyms[i]] != filesInfo[j].name && !idgaf)
 				{ // Уже такой был => уже определили => конфликт
-					std::cout << "=================== ERROR ===================" << std::endl;
-					std::cout << "multiple definition of symbol: " << std::endl;
-					std::cout << file.callSyms[i] << std::endl;
-					std::cout << std::endl;
+					std::cerr << "=================== ERROR ===================" << std::endl;
+					std::cerr << "multiple definition of symbol: " << std::endl;
+					std::cerr << file.callSyms[i] << std::endl;
+					std::cerr << std::endl;
 					std::ifstream file0(wd + "/" + reqFolders[1] + "/" + subFolders[0] + "/" + getNameNoExt(syms[file.callSyms[i]]));
 					std::string line;
 					std::getline(file0, line);
 					file0.close();
-					std::cout << "First definition in file: " << getName(line) << std::endl;
+					std::cerr << "First definition in file: " << getName(line) << std::endl;
 					std::ifstream file1(wd + "/" + reqFolders[1] + "/" + subFolders[0] + "/" + getNameNoExt(filesInfo[j].name));
 					std::getline(file1, line);
 					file1.close();
-					std::cout << "Second definition in file: " << getName(line) << std::endl;
-					std::cout << std::endl;
-					std::cout << "You can choose not to link files forcibly by using the flag: --no-link-force [filename]" << std::endl;
-					std::cout << "Or you can run builder with --idgaf flag to ignore this error" << std::endl;
-					std::cout << std::endl;
-					std::cout << std::endl;
-					return -1;
+					std::cerr << "Second definition in file: " << getName(line) << std::endl;
+					std::cerr << std::endl;
+					std::cerr << "You can choose not to link files forcibly by using the flag: --no-link-force [filename]" << std::endl;
+					std::cerr << "Or you can run builder with --idgaf flag to ignore this error" << std::endl;
+					std::cerr << std::endl;
+					std::cerr << std::endl;
+					return 1;
 				}
 				// Конфликтов нет, либо мы их игнорируем:
 				if(find(toLink, filesInfo[j].name) == -1){
@@ -314,10 +314,10 @@ std::string link(const std::string& wd,
 		system(cmd.c_str());
 	}
 	else{
-		std::cout << "===================== ERROR =====================" << std::endl;
-		std::cout << "WTF unknown linkType: " << linkType << std::endl;
-		std::cout << "This is internal belder error, recompile belder" << std::endl;
-		std::cout << std::endl;
+		std::cerr << "===================== ERROR =====================" << std::endl;
+		std::cerr << "WTF unknown linkType: " << linkType << std::endl;
+		std::cerr << "This is internal belder error, recompile belder" << std::endl;
+		std::cerr << std::endl;
 		return "nothing to link";
 	}
 

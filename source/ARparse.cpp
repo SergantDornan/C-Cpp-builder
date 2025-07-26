@@ -20,12 +20,12 @@ void parse_ARLIB(binFile& newfile){
     isAR |= (uint8_t(*(ar + 7)) != '\n');
     isAR = !isAR;
     if(!isAR){
-    	std::cout << "==================================== ERROR ====================================" << std::endl;
-        std::cout << "belder thinks that file: " << newfile.name << std::endl;
-        std::cout << "is an AR (static lib) file but it is not" << std::endl;
-        std::cout << "try running belder with -reb flag or with \"clear\" option" << std::endl;
-        std::cout << "or maybe you specified some strange file in force link section" << std::endl;
-        std::cout << std::endl;
+    	std::cerr << "==================================== ERROR ====================================" << std::endl;
+        std::cerr << "belder thinks that file: " << newfile.name << std::endl;
+        std::cerr << "is an AR (static lib) file but it is not" << std::endl;
+        std::cerr << "try running belder with -reb flag or with \"clear\" option" << std::endl;
+        std::cerr << "or maybe you specified some strange file in force link section" << std::endl;
+        std::cerr << std::endl;
     	return;
     }
     unsigned char* ptr = ar;

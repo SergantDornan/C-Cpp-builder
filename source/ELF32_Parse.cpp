@@ -18,11 +18,11 @@ void parse32(Elf32_parse_result& result, unsigned char* elf){
                 process_symbol_table32(result, elf, sH, sectionHeaders, correctEndian);    
         }
     } else {
-        std::cout << "=========================== ERROR ===========================" << std::endl;
-        std::cout << "ELF32_Parse.cpp" << std::endl;
-        std::cout << "File: " << result.name << " has no Section Table (wtf?)" << std::endl;
-        std::cout << "This is very weird, try running belder with -reb flag or with \"clear\" option" << std::endl;
-        std::cout << std::endl;
+        std::cerr << "=========================== ERROR ===========================" << std::endl;
+        std::cerr << "ELF32_Parse.cpp" << std::endl;
+        std::cerr << "File: " << result.name << " has no Section Table (wtf?)" << std::endl;
+        std::cerr << "This is very weird, try running belder with -reb flag or with \"clear\" option" << std::endl;
+        std::cerr << std::endl;
         return;   
     }
 }

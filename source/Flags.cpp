@@ -62,9 +62,9 @@ std::vector<std::string> getParameters(std::vector<std::string>& args,
 			it++;
 	}
 	getAddDirs(args, parameters);
-	FindForceLinkUnlink(args, parameters);
 	getSpecFlags(args, parameters[10], "--compile-flags");
 	getSpecFlags(args, parameters[11], "--link-flags");
+	FindForceLinkUnlink(args, parameters);
 	getRestFlags(args, parameters[12]);
 	auto compilers = split(parameters[5]);
 	getNameAfterFlag(args, "--CC", compilers[0]);
@@ -175,15 +175,15 @@ int findEntryFile(const std::vector<std::string>& args,
 		std::vector<std::string> mainFile;
 		findFile(mainFile, args[0], cd, AddInc, fUnInc);
 		if(mainFile.size() == 0){
-			std::cout << "================== ERROR ==================" << std::endl;
-			std::cout << "Cannot find file: " << args[0] << std::endl;
+			std::cerr << "================== ERROR ==================" << std::endl;
+			std::cerr << "Cannot find file: " << args[0] << std::endl;
 			return 1;
 		}
 		else if(mainFile.size() > 1){
-			std::cout << "================== ERROR ==================" << std::endl;
-			std::cout << "multiple files matching \"" << args[0] << "\" found:" << std::endl;
+			std::cerr << "================== ERROR ==================" << std::endl;
+			std::cerr << "multiple files matching \"" << args[0] << "\" found:" << std::endl;
 			for(int i = 0; i < mainFile.size(); ++i)
-				std::cout << '\t' << mainFile[i] << std::endl;
+				std::cerr << '\t' << mainFile[i] << std::endl;
 			return 1; 
 		}
 		parameters[0] = mainFile[0];
@@ -198,15 +198,15 @@ int findEntryFile(const std::vector<std::string>& args,
 				findFile(mainFile, s0, cd, AddInc, fUnInc);
 			}
 			if(mainFile.size() == 0){
-				std::cout << "================== ERROR ==================" << std::endl;
-				std::cout << "Cannot find entry file" << std::endl;
+				std::cerr << "================== ERROR ==================" << std::endl;
+				std::cerr << "Cannot find entry file" << std::endl;
 				return 1;
 			}
 			else if(mainFile.size() > 1){
-				std::cout << "================== ERROR ==================" << std::endl;
-				std::cout << "multiple files matching \"" << s0 << "\" found:" << std::endl;
+				std::cerr << "================== ERROR ==================" << std::endl;
+				std::cerr << "multiple files matching \"" << s0 << "\" found:" << std::endl;
 				for(int i = 0; i < mainFile.size(); ++i)
-					std::cout << '\t' << mainFile[i] << std::endl;
+					std::cerr << '\t' << mainFile[i] << std::endl;
 				return 1; 
 			}
 			parameters[0] = mainFile[0];
@@ -220,8 +220,8 @@ void getNameAfterFlag(const std::vector<std::string>& args,
 	if(index != -1){
 		if((index + 1) >= args.size() || ((index + 1) < args.size() &&
 			isFlag(args[index + 1]))){
-			std::cout << "=================== ERROR ===================" << std::endl;
-			std::cout << "no file name after " << flag << " flag" << std::endl;
+			std::cerr << "=================== ERROR ===================" << std::endl;
+			std::cerr << "no file name after " << flag << " flag" << std::endl;
 			return;
 		}
 		s = args[index + 1];
@@ -286,25 +286,25 @@ void FindForceLinkUnlink(std::vector<std::string>& args,
 			std::vector<std::string> result;
 			findFile(result, newv[i], cd, AddInc, fUnInc);
 			if(result.size() == 0){
-				std::cout << "======================== ERROR ========================" << std::endl;
-				std::cout << "Cannot find file: " << newv[i] << std::endl;
-				std::cout << "You specified it in ";
-				if(i < newfLinkSize) std::cout << "force-link ";
-				else if(i < newfLinkSize + newfUnlinkSize) std::cout << "force-unlink ";
-				else std::cout << "default-link ";
-				std::cout << "list" << std::endl;
+				std::cerr << "======================== ERROR ========================" << std::endl;
+				std::cerr << "Cannot find file: " << newv[i] << std::endl;
+				std::cerr << "You specified it in ";
+				if(i < newfLinkSize) std::cerr << "force-link ";
+				else if(i < newfLinkSize + newfUnlinkSize) std::cerr << "force-unlink ";
+				else std::cerr << "default-link ";
+				std::cerr << "list" << std::endl;
 				return;
 			}
 			else if(result.size() > 1){
-				std::cout << "======================== ERROR ========================" << std::endl;
-				std::cout << "multiple files matching \"" << newv[i] << "\" found:" << std::endl;
+				std::cerr << "======================== ERROR ========================" << std::endl;
+				std::cerr << "multiple files matching \"" << newv[i] << "\" found:" << std::endl;
 				for(int j = 0; j < result.size(); ++j)
-					std::cout << '\t' << result[j] << std::endl;
-				std::cout << "You specified it in ";
-				if(i < newfLinkSize) std::cout << "force-link ";
-				else if(i < newfLinkSize + newfUnlinkSize) std::cout << "force-unlink ";
-				else std::cout << "default-link ";
-				std::cout << "list" << std::endl;
+					std::cerr << '\t' << result[j] << std::endl;
+				std::cerr << "You specified it in ";
+				if(i < newfLinkSize) std::cerr << "force-link ";
+				else if(i < newfLinkSize + newfUnlinkSize) std::cerr << "force-unlink ";
+				else std::cerr << "default-link ";
+				std::cerr << "list" << std::endl;
 				return;
 			}
 			newv[i] = result[0];
@@ -312,44 +312,48 @@ void FindForceLinkUnlink(std::vector<std::string>& args,
 		else{
 			std::vector<std::string> result;
 			if(i < newfLinkSize){
+				bool erase = false;
 				findFile(result, ("lib" + newv[i] + ".so"), cd, AddInc, fUnInc);
 				if(result.size() == 0) findFile(result, ("lib" + newv[i] + ".a"), cd, AddInc, fUnInc);
 				if(result.size() == 0){
-					std::cout << "======================== ERROR ========================" << std::endl;
-					std::cout << "Cannot find files lib" << newv[i] << ".so or lib" << newv[i] << ".a" << std::endl;
-					std::cout << "You specified \"" << newv[i] << "\" in force-link list, belder thinks it is a library";
-					return;
+					// std::cerr << "======================== ERROR ========================" << std::endl;
+					// std::cerr << "Cannot find files lib" << newv[i] << ".so or lib" << newv[i] << ".a" << std::endl;
+					// std::cerr << "You specified \"" << newv[i] << "\" in force-link list, belder thinks it is a library";
+					// return;
+					parameters[11] += (" -l" + newv[i]);
+					erase = true;
 				}
 				else if(result.size() > 1){
-					std::cout << "======================== ERROR ========================" << std::endl;
-					std::cout << "multiple files matching \"" << newv[i] << "\" found:" << std::endl;
+					std::cerr << "======================== ERROR ========================" << std::endl;
+					std::cerr << "multiple files matching \"" << newv[i] << "\" found:" << std::endl;
 					for(int j = 0; j < result.size(); ++j)
-					std::cout << '\t' << result[j] << std::endl;
-					std::cout << "You specified it in force-link list, belder thinks it is a library" << std::endl;
+						std::cerr << '\t' << result[j] << std::endl;
+					std::cerr << "You specified it in force-link list, belder thinks it is a library" << std::endl;
 					return;
 				}
-				newv[i] = result[0];
+				if(!erase) newv[i] = result[0];
+				else newv[i] = "-1";
 			}
 			else{
 				findFile(result, ("lib" + newv[i] + ".so"), cd, AddInc, fUnInc);
 				findFile(result, ("lib" + newv[i] + ".a"), cd, AddInc, fUnInc);
 				if(result.size() == 0){
-					std::cout << "======================== ERROR ========================" << std::endl;
-					std::cout << "Cannot find files lib" << newv[i] << ".so or lib" << newv[i] << ".a" << std::endl;
-					std::cout << "You specified \"" << newv[i] << "\" in ";
-					if(i < newfLinkSize + newfUnlinkSize) std::cout << "force-unlink ";
-					else std::cout << "default-link ";
-					std::cout << "list, belder thinks it is a library" << std::endl;
+					std::cerr << "======================== ERROR ========================" << std::endl;
+					std::cerr << "Cannot find files lib" << newv[i] << ".so or lib" << newv[i] << ".a" << std::endl;
+					std::cerr << "You specified \"" << newv[i] << "\" in ";
+					if(i < newfLinkSize + newfUnlinkSize) std::cerr << "force-unlink ";
+					else std::cerr << "default-link ";
+					std::cerr << "list, belder thinks it is a library" << std::endl;
 					return;
 				}
 				else if((result.size() > 2) || 
 					(result.size() == 2 && !(getExt(result[0]) == "so" && getExt(result[1]) == "a")))
 				{
-					std::cout << "======================== ERROR ========================" << std::endl;
-					std::cout << "multiple files matching \"" << newv[i] << "\" found:" << std::endl;
+					std::cerr << "======================== ERROR ========================" << std::endl;
+					std::cerr << "multiple files matching \"" << newv[i] << "\" found:" << std::endl;
 					for(int j = 0; j < result.size(); ++j)
-						std::cout << '\t' << result[j] << std::endl;
-					std::cout << "You specified it in force-link list, belder thinks it is a library" << std::endl;
+						std::cerr << '\t' << result[j] << std::endl;
+					std::cerr << "You specified it in force-link list, belder thinks it is a library" << std::endl;
 					return;
 				}
 				if(result.size() == 1) newv[i] = result[0];
@@ -357,9 +361,11 @@ void FindForceLinkUnlink(std::vector<std::string>& args,
 			}
 		}
 	}
-
-	//std::vector<std::string> fLink, fUnlink, defLink;
-	//std::vector<std::string> fLibs, fUnLibs, defLibs;
+	it = newv.begin();
+	while(it != newv.end()){
+		if(*it == "-1") newv.erase(it);
+		else it++;
+	}
 
 	for(int i = 0; i < newv.size(); ++i){
 		if(i < newfLinkSize){
