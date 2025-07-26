@@ -3,24 +3,37 @@
 // Структура dep файла:
 // путь к описываемому файлу
 // время изменения описываемого файла
-// все зависимости (файлы которые зависят от текущего)
+// все файлы от которых файл зависит (пути к настоящим файлам)
+// файлы которые зависят от текущего (пути к деп файлам)
+
+std::vector<std::pair<std::string,bool>> getChanges(const std::vector<std::string>& oldV, 
+    const std::vector<std::string>& newV){
+
+    if(oldV == newV) return std::vector<std::pair<std::string,bool>>{};
+    std::vector<std::pair<std::string,bool>> result;
+    for(int i = 0; i < newV.size(); ++i){
+        if(find(oldV, newV[i]) == -1) result.push_back(std::pair<std::string,bool>{newV[i],true}); 
+    }
+    for(int i = 0; i < oldV.size(); ++i){
+        if(find(newV, oldV[i]) == -1) result.push_back(std::pair<std::string,bool>{oldV[i],false});
+    }
+    return result;
+}
 
 void updateFile(std::vector<std::string>& toCompile,
     const std::string& path,std::vector<std::string>& recCheck){
 
     recCheck.push_back(getName(path));
     std::ifstream file(path);
-    if(!file.is_open())
-        return;
+    if(!file.is_open()) return;
     std::vector<std::string> v;
     std::string line;
-    while(std::getline(file,line))
-        v.push_back(line);
+    while(std::getline(file,line)) v.push_back(line);
     file.close();
     if(getExt(path) != "h" && getExt(path) != "hpp" && find(toCompile, path) == -1)
         toCompile.push_back(path);
-    if(v.size() > 2){
-        auto depFiles = split(v[2]); // Берем все файлы, которые зависят от текущего
+    if(v[3] != "-1"){
+        auto depFiles = split(v[3]); // Берем все файлы, которые зависят от текущего
         for(int i = 0; i < depFiles.size(); ++i){
             if(find(recCheck, getName(depFiles[i])) == -1) // Чтобы не было бесконечной рекурсии
                 updateFile(toCompile,depFiles[i], recCheck); // идем вниз по дереву зависимостей
@@ -31,140 +44,105 @@ void updateFile(std::vector<std::string>& toCompile,
 int updateFiles(std::vector<std::string>& toCompile, 
 	const std::vector<std::string>& HDdirs, const std::vector<std::string>& SDdirs)
 {
-	// Проход по depFiles хедеров, смотрим что надо пересобрать
-    for(int i = 1; i < HDdirs.size(); ++i){
-        std::fstream file(HDdirs[i]);
-        if(!file.is_open()){
-            std::cout << std::endl;
-            std::cout << "======================== ERROR ========================" << std::endl;
-            std::cout << "====== Compile.cpp: compile() ======" << std::endl;
-            std::cout << "Cannot open file: " << HDdirs[i] << std::endl;
-            std::cout << "Try launching builder with --rebuild / -reb flag" << std::endl;       
-            std::cout << std::endl;
-            return 1;
-        }
+    std::vector<std::string> dirs = std::vector<std::string>(HDdirs.begin() + 1, HDdirs.end()) 
+        + std::vector<std::string>(SDdirs.begin() + 1, SDdirs.end());
+
+    for(int i = 0; i < dirs.size(); ++i){
+        std::fstream file(dirs[i]);
         std::vector<std::string> v;
         std::string line;
-        while(std::getline(file,line))
-            v.push_back(line);
+        while(std::getline(file,line)) v.push_back(line);
         file.close();
         if(v[1] != getChangeTime(v[0])){
-            std::ofstream out(HDdirs[i]);
-            out << v[0] << std::endl;
-            out << getChangeTime(v[0]) << std::endl;
-            if(v.size() > 2) out << v[2];
-            out.close();
+            if(getExt(v[0]) == "h" || getExt(v[0]) == "hpp"){
+                std::ofstream out(dirs[i]);
+                out << v[0] << std::endl;
+                out << getChangeTime(v[0]) << std::endl;
+                out << v[2] << std::endl;
+                out << v[3] << std::endl;
+                out.close();
+            }
             std::vector<std::string> recCheck;
-            updateFile(toCompile,HDdirs[i],recCheck);
-        }
-    }
-    // Такой же проход по сурсам
-    for(int i = 1; i < SDdirs.size(); ++i){
-        std::fstream file(SDdirs[i]);
-        if(!file.is_open()){
-            std::cout << std::endl;
-            std::cout << "======================== ERROR ========================" << std::endl;
-            std::cout << "====== Compile.cpp: compile() ======" << std::endl;
-            std::cout << "Cannot open file: " << SDdirs[i] << std::endl;
-            std::cout << "Try launching builder with --rebuild / -reb flag" << std::endl;       
-            std::cout << std::endl;
-            return 1;
-        }
-        std::vector<std::string> v;
-        std::string line;
-        while(std::getline(file,line))
-            v.push_back(line);
-        file.close();
-        if(v[1] != getChangeTime(v[0])){
-            std::vector<std::string> recCheck;
-            updateFile(toCompile,SDdirs[i], recCheck);
+            updateFile(toCompile,dirs[i],recCheck);
         }
     }
     return 0;
 }
 
-int UpdateDependencies(const std::vector<std::string>& HDdirs,
+void UpdateDependencies(const std::vector<std::string>& HDdirs,
 	const std::vector<std::string>& SDdirs,
 	const std::string& bd, const std::string& id,
     const std::vector<std::string>& allHeaders, 
     const std::vector<std::string>& allSource){
 
-	for(int i = 1; i < HDdirs.size(); ++i){
-        std::fstream file(HDdirs[i]);
-		if(!file.is_open()){
-            std::cout << std::endl;
-	        std::cout << "======================== ERROR ========================" << std::endl;
-            std::cout << "====== Compile.cpp: compile() ======" << std::endl;
-            std::cout << "Cannot open file: " << HDdirs[i] << std::endl;
-            std::cout << "Try launching builder with --rebuild / -reb flag" << std::endl;       
-            std::cout << std::endl;
-            return 1;
-        }
+    std::vector<std::string> dirs = std::vector<std::string>(HDdirs.begin() + 1, HDdirs.end()) 
+        + std::vector<std::string>(SDdirs.begin() + 1, SDdirs.end());
+    std::vector<std::string> changedFiles;
+    // file name: <файлы от которых зависит, файлы которые зависят от>
+    std::map<std::string, std::pair<std::vector<std::string>, std::vector<std::string>>> data;
+    for(int i = 0; i < dirs.size(); ++i){
+        std::fstream file(dirs[i]);
         std::vector<std::string> v;
         std::string line;
-        while(std::getline(file,line))
-            v.push_back(line);
+        while(std::getline(file,line)) v.push_back(line);
         file.close();
-        if(v.size() > 2){
-            std::ofstream out(HDdirs[i]);
-            out << v[0] << std::endl;
-            out << v[1] << std::endl;
-            out.close();
-        }
-    }
-    for(int i = 1; i < SDdirs.size(); ++i){
-        std::fstream file(SDdirs[i]);
-        if(!file.is_open()){
-            std::cout << std::endl;
-            std::cout << "======================== ERROR ========================" << std::endl;
-            std::cout << "====== Compile.cpp: compile() ======" << std::endl;
-            std::cout << "Cannot open file: " << SDdirs[i] << std::endl;
-            std::cout << "Try launching builder with --rebuild / -reb flag" << std::endl;       
-            std::cout << std::endl;
-            return 1;
-        }
-        std::vector<std::string> v;
-		std::string line;
-        while(std::getline(file,line))
-            v.push_back(line);
-        file.close();
-        if(v.size() > 2){
-            std::ofstream out(SDdirs[i]);
-            out << v[0] << std::endl;
-            out << v[1] << std::endl;
-            out.close();
-        }
+        if(getChangeTime(v[0]) != v[1]) changedFiles.push_back(v[0]);
+        std::vector<std::string> inc1, inc2;
+        if(v[2] != "-1") inc1 = split(v[2]);
+        if(v[3] != "-1") inc2 = split(v[3]);
+        data[v[0]] = std::pair<std::vector<std::string>, std::vector<std::string>>{inc1, inc2};
     }
 
-    // Проход по сурс файлам
-    for(int i = 0; i < allSource.size(); ++i){
+    std::vector<std::string> addChangedFiles;
+    for(int i = 0; i < changedFiles.size(); ++i){
         std::vector<std::string> includes;
-        getIncludes(includes, allHeaders, allSource, allSource[i]);
-        for(int j = 0; j < includes.size(); ++j){
-            std::string path;
-            if(getExt(includes[j]) == "h" || getExt(includes[j]) == "hpp")
-                path = id + "/" + subFolders[0] + "/" + converPathToName(includes[j]);
-            else
-                path = bd + "/" + subFolders[0] + "/" + converPathToName(includes[j]);
-            std::string s = bd + "/" + subFolders[0] + "/" + converPathToName(allSource[i]) + " ";
-            appendToFile(path,s);
+        getIncludes(includes, allHeaders, allSource, changedFiles[i]);
+        std::vector<std::pair<std::string,bool>> changes = getChanges(data[changedFiles[i]].first, includes);
+        if(changes.size() > 0){
+            data[changedFiles[i]].first = includes;
+            for(int j = 0; j < changes.size(); ++j){
+                if(find(addChangedFiles, changes[j].first) == -1) addChangedFiles.push_back(changes[j].first);
+                std::string pathToDepfile;
+                if(getExt(changedFiles[i]) == "h" || getExt(changedFiles[i]) == "hpp")
+                    pathToDepfile = id + "/" + subFolders[0] + "/" + converPathToName(changedFiles[i]);
+                else
+                    pathToDepfile = bd + "/" + subFolders[0] + "/" + converPathToName(changedFiles[i]);
+                if(changes[j].second) data[changes[j].first].second.push_back(pathToDepfile);
+                else data[changes[j].first].second.erase(
+                    std::find(data[changes[j].first].second.begin(),
+                    data[changes[j].first].second.end(), pathToDepfile));
+            }
         }
     }
-    // Проход по хедерам
-    for(int i = 0; i < allHeaders.size(); ++i){
-        std::vector<std::string> includes;
-        getIncludes(includes, allHeaders, allSource, allHeaders[i]);
-        for(int j = 0; j < includes.size(); ++j){
-            std::string path;
-            if(getExt(includes[j]) == "h" || getExt(includes[j]) == "hpp")
-                path = id + "/" + subFolders[0] + "/" + converPathToName(includes[j]);
-            else
-                path = bd + "/" + subFolders[0] + "/" + converPathToName(includes[j]);
-            std::string s = id + "/" + subFolders[0] + "/" + converPathToName(allHeaders[i]) + " ";
-            appendToFile(path,s);
+    changedFiles += addChangedFiles;
+
+    for(int i = 0; i < changedFiles.size(); ++i){
+        std::string pathToDepfile;
+        if(getExt(changedFiles[i]) == "h" || getExt(changedFiles[i]) == "hpp")
+            pathToDepfile = id + "/" + subFolders[0] + "/" + converPathToName(changedFiles[i]);
+        else
+            pathToDepfile = bd + "/" + subFolders[0] + "/" + converPathToName(changedFiles[i]);
+        std::string time;
+        std::ifstream file(pathToDepfile);
+        std::getline(file, time);
+        std::getline(file, time);
+        file.close();
+        std::ofstream out(pathToDepfile);
+        out << changedFiles[i] << std::endl;
+        out << time << std::endl;
+        if(data[changedFiles[i]].first.size() == 0) out << "-1" << std::endl;
+        else{
+            for(int j = 0; j < data[changedFiles[i]].first.size(); ++j)
+                out << data[changedFiles[i]].first[j] << ' ';
+            out << std::endl;
+        }
+        if(data[changedFiles[i]].second.size() == 0) out << "-1" << std::endl;
+        else{
+            for(int j = 0; j < data[changedFiles[i]].second.size(); ++j)
+                out << data[changedFiles[i]].second[j] << ' ';
+            out << std::endl;
         }
     }
-    return 0;
 }
 
 
@@ -182,46 +160,27 @@ bool createDepfiles(const std::string& wd,
     std::string cmd = "rm";
 	for(int i = 1; i < dirs.size(); ++i){
 		std::ifstream file(dirs[i]);
-		if(!file.is_open()){
-			std::cout << std::endl;
-			std::cout << "=================== ERROR ===================" << std::endl;
-			std::cout << "DepFiles.cpp: createDepfiles()" << std::endl;
-			std::cout << "Cannot open file: " << dirs[i] << std::endl;
-			std::cout << "Try launching builder with --rebuild / -reb flag" << std::endl;
-			std::cout << std::endl;
-			return false;
-		}
 		std::string line;
 		std::getline(file, line);
-		if(find(allSource, line) == -1){
+		file.close();
+        if(find(allSource, line) == -1){
 			changeSet = true;
 			std::string objFile = wd + "/" + reqFolders[1] + "/" + subFolders[1] + "/" + getName(dirs[i]) + ".o";
 			cmd += (" " + dirs[i] + " " + objFile);
 		}
-		file.close();
 	}
-
 
     // Удаление лишних деп файлов у хедеров
 	dirs = getDirs(wd + "/" + reqFolders[0] + "/" + subFolders[0]);
 	for(int i = 1; i < dirs.size(); ++i){
 		std::ifstream file(dirs[i]);
-		if(!file.is_open()){
-			std::cout << std::endl;
-			std::cout << "=================== ERROR ===================" << std::endl;
-			std::cout << "DepFiles.cpp: createDepfiles()" << std::endl;
-			std::cout << "Cannot open file: " << dirs[i] << std::endl;
-			std::cout << "Try launching builder with --rebuild / -reb flag" << std::endl;
-			std::cout << std::endl;
-			return false;
-		}
 		std::string line;
 		std::getline(file, line);
-		if(find(allHeaders, line) == -1){
-			changeSet = true;
-			cmd = (" " + dirs[i]);
-		}
 		file.close();
+        if(find(allHeaders, line) == -1){
+			changeSet = true;
+			cmd += (" " + dirs[i]);
+		}
 	}
     if(cmd != "rm") system(cmd.c_str());
 
@@ -235,6 +194,8 @@ bool createDepfiles(const std::string& wd,
 			std::ofstream newfile(file);
 			newfile << allHeaders[i] << std::endl;
 			newfile << "-1" << std::endl;
+            newfile << "-1" << std::endl;
+            newfile << "-1" << std::endl;
 			newfile.close();
 		}
 	}
@@ -248,6 +209,8 @@ bool createDepfiles(const std::string& wd,
 			std::ofstream newfile(file);
 			newfile << allSource[i] << std::endl;
 			newfile << "-1" << std::endl;
+            newfile << "-1" << std::endl;
+            newfile << "-1" << std::endl;
 			newfile.close();
 		}
 	}

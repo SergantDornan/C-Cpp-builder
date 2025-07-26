@@ -13,7 +13,8 @@ bool isFlag(const std::string& s){
 }
 
 std::vector<std::string> getParameters(std::vector<std::string>& args,
-	const std::string& path, const std::string& cd)
+	const std::string& path, const std::string& cd,
+	const std::string& prInName)
 {
 
 	std::vector<std::string> parameters;
@@ -21,11 +22,27 @@ std::vector<std::string> getParameters(std::vector<std::string>& args,
 	std::string line;
 	while(std::getline(in, line)) parameters.push_back(line);
 	in.close();
-	if(find(args, "--clear-flags") != -1 || find(args, "--clean-flags") != -1 ||
-		find(args, "--flags-clear") != -1 || find(args, "--flags-clean") != -1)
+	bool clearFlags = (find(args, "--clear-flags") != -1 || find(args, "--clean-flags") != -1 ||
+		find(args, "--flags-clear") != -1 || find(args, "--flags-clean") != -1);
+	bool clearOptions = (find(args, "--clean-options") != -1 || find(args, "--clear-options") != -1);
+	bool isFoundEntry = (findEntryFile(args,cd, parameters) == 0);
+	if(prInName != parameters[0] && prInName != "-1" && isFoundEntry){
+		std::cout << std::endl;
+		std::cout << "------- Change of entry file, clearing all previous options -------" << std::endl;
+		clearOptions = true;
+	}
+	if(clearFlags || clearOptions)
 	{
 		for(int i = 7; i <= 12; ++i)
 			parameters[i] = "-1";
+	}
+	if(clearOptions){
+		parameters[2] = "-1";
+		parameters[3] = "-1";
+		parameters[4] = "-1";
+		parameters[6] = "-1";
+		parameters[13] = "-1";
+		parameters[14] = "-1";
 	}
 	auto it = args.begin();
 	while(it != args.end()){
@@ -44,13 +61,11 @@ std::vector<std::string> getParameters(std::vector<std::string>& args,
 		else
 			it++;
 	}
-
 	getAddDirs(args, parameters);
 	FindForceLinkUnlink(args, parameters);
 	getSpecFlags(args, parameters[10], "--compile-flags");
 	getSpecFlags(args, parameters[11], "--link-flags");
 	getRestFlags(args, parameters[12]);
-	findEntryFile(args,cd, parameters);
 	auto compilers = split(parameters[5]);
 	getNameAfterFlag(args, "--CC", compilers[0]);
 	getNameAfterFlag(args, "--CXX", compilers[1]);
@@ -82,7 +97,7 @@ void getSpecFlags(std::vector<std::string>& args, std::string& s, const std::str
 		}
 		if(find(switchFlags, *it) != -1)
 			break;
-		if(!get || find(keyWords, (*it)) != -1){
+		if(!get || find(keyWords, (*it)) != -1 || find(possibleFlags, (*it)) != -1){
 			it++;
 			continue;
 		}
@@ -150,7 +165,7 @@ void getAddDirs(std::vector<std::string>& args, std::vector<std::string>& parame
 	}
 	else parameters[14] = "-1";
 }
-void findEntryFile(const std::vector<std::string>& args,
+int findEntryFile(const std::vector<std::string>& args,
 	const std::string& cd, std::vector<std::string>& parameters){
 
 	std::vector<std::string> AddInc, fUnInc;
@@ -162,20 +177,18 @@ void findEntryFile(const std::vector<std::string>& args,
 		if(mainFile.size() == 0){
 			std::cout << "================== ERROR ==================" << std::endl;
 			std::cout << "Cannot find file: " << args[0] << std::endl;
-			parameters[0] = "-1";
-			return;
+			return 1;
 		}
 		else if(mainFile.size() > 1){
 			std::cout << "================== ERROR ==================" << std::endl;
 			std::cout << "multiple files matching \"" << args[0] << "\" found:" << std::endl;
 			for(int i = 0; i < mainFile.size(); ++i)
 				std::cout << '\t' << mainFile[i] << std::endl;
-			parameters[0] = "-1";
-			return; 
+			return 1; 
 		}
 		parameters[0] = mainFile[0];
 	}
-	if(args.size() == 0 || (args.size() != 0 && isFlag(args[0]))){
+	if(args.size() == 0 || (args.size() != 0 && (isFlag(args[0]) || find(keyWords, args[0]) != -1))){
 		if(parameters[0] == "-1"){
 			std::vector<std::string> mainFile;
 			std::string s0 = "main.cpp";
@@ -187,20 +200,19 @@ void findEntryFile(const std::vector<std::string>& args,
 			if(mainFile.size() == 0){
 				std::cout << "================== ERROR ==================" << std::endl;
 				std::cout << "Cannot find entry file" << std::endl;
-				parameters[0] = "-1";
-				return;
+				return 1;
 			}
 			else if(mainFile.size() > 1){
 				std::cout << "================== ERROR ==================" << std::endl;
 				std::cout << "multiple files matching \"" << s0 << "\" found:" << std::endl;
 				for(int i = 0; i < mainFile.size(); ++i)
 					std::cout << '\t' << mainFile[i] << std::endl;
-				parameters[0] = "-1";
-				return; 
+				return 1; 
 			}
 			parameters[0] = mainFile[0];
 		}
 	}
+	return 0;
 }
 void getNameAfterFlag(const std::vector<std::string>& args,
 	const std::string& flag,std::string& s){

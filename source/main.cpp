@@ -24,6 +24,7 @@ const std::string SourceCodeFolder;
 // --clear-flags
 // clean, clear, mrproper - удалить папку с build
 // --no-include чтобы отменить -I флаг или не включать подпапку
+// --clean-options, --clear-options - удалить все флаги, очиситить все force-link листы, AddInc листы и прочее 
 
 // Структура project config:
 // main input
@@ -43,7 +44,6 @@ const std::string SourceCodeFolder;
 // force unlink dirs
 
 int main(int argc, char* argv[]){
-
 	if(pocket && !exists(root)){
 		std::string cmd = "mkdir " + root;
 		system(cmd.c_str());
@@ -123,15 +123,14 @@ int main(int argc, char* argv[]){
 	}
 	std::string wd = createEssentials(rebuild);
 	std::string projectConfig = wd + "/" + configFile;
-	std::string prOutName;
+	std::string prInName, prOutName;
 	std::ifstream f(projectConfig);
-	std::getline(f, prOutName);
+	std::getline(f, prInName);
 	std::getline(f, prOutName);
 	f.close();
-	std::vector<std::string> parameters = getParameters(args, projectConfig, cd);
+	std::vector<std::string> parameters = getParameters(args, projectConfig, cd, prInName);
 	rebuildForSharedLib(prOutName, parameters[1], wd);
 	if(prOutName != parameters[1]) relink = true;
-
 
 	std::ofstream out(projectConfig);
 	for(int i = 0; i < parameters.size(); ++i) out << parameters[i] << std::endl;

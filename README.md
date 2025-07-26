@@ -141,6 +141,8 @@ belder config --CXX default # use standart g++ for C++ language
 
 --clear-flags, --clean-flags, --flags-clean, --flags-clear Delete all flags from config file
 
+--clear-options, --clean-options Reset force-link, force-unlink, additional directories, no-include directories lists
+
 --idgaf Ignore multiple definition error
 
 Any flag not specified above will be considered as a flag to the compiler

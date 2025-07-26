@@ -53,7 +53,7 @@ std::vector<std::string> toLinkList(const std::vector<std::string>& parameters,
     std::map<std::string, std::string> syms;
     std::vector<binFile> binLink;
     binLink.push_back(mainObj); // Эта штука нужна только для повторной проверки на конфликты
-	int code = findLinks(toLink, filesInfo, mainObj, syms, idgaf, binLink);
+	int code = findLinks(toLink, filesInfo, mainObj, syms, idgaf, binLink,wd);
 	for(int i = 0; i < fLink.size(); ++i){
 		int index = -1;
 		for(int j = 0; j < filesInfo.size(); ++j){
@@ -71,7 +71,7 @@ std::vector<std::string> toLinkList(const std::vector<std::string>& parameters,
 			return std::vector<std::string>{};
 		}
 		if(find(toLink, filesInfo[index].name) == -1) toLink.push_back(filesInfo[index].name);
-		code |= findLinks(toLink, filesInfo, filesInfo[index], syms,idgaf,binLink);
+		code |= findLinks(toLink, filesInfo, filesInfo[index], syms,idgaf,binLink,wd);
 	}
 	for(int i = 0; i < forceLinkLibs.size(); ++i){
 		int index = -1;
@@ -90,7 +90,7 @@ std::vector<std::string> toLinkList(const std::vector<std::string>& parameters,
 			return std::vector<std::string>{};
 		}
 		if(find(toLink, filesInfo[index].name) == -1) toLink.push_back(filesInfo[index].name);
-		code |= findLinks(toLink, filesInfo, filesInfo[index], syms, idgaf,binLink);
+		code |= findLinks(toLink, filesInfo, filesInfo[index], syms, idgaf,binLink,wd);
 	}
 
 	if(code != 0) return std::vector<std::string>{};
@@ -104,8 +104,15 @@ std::vector<std::string> toLinkList(const std::vector<std::string>& parameters,
 					std::cout << "multiple definition of symbol: " << std::endl;
 					std::cout << binLink[j].defSyms[h] << std::endl;
 					std::cout << std::endl;
-					std::cout << "First definition in file: " << getName(binLink[i].name) <<  std::endl;
-					std::cout << "Second definition in file: " << getName(binLink[j].name) << std::endl;
+					std::ifstream file(wd + "/" + reqFolders[1] + "/" + subFolders[0] + "/" + getNameNoExt(binLink[i].name));
+					std::string line;
+					std::getline(file, line);
+					file.close();
+					std::cout << "First definition in file: " << getName(line) <<  std::endl;
+					std::ifstream file1(wd + "/" + reqFolders[1] + "/" + subFolders[0] + "/" + getNameNoExt(binLink[j].name));
+					std::getline(file1, line);
+					file1.close();
+					std::cout << "Second definition in file: " << getName(line) << std::endl;
 					std::cout << std::endl;
 					std::cout << "You can choose not to link files forcibly by using the flag: --no-link-force [filename]" << std::endl;
 					std::cout << "Or you can run builder with --idgaf flag to ignore this error" << std::endl;
@@ -154,7 +161,7 @@ void OneThreadObjAnal(const std::string& wd, const std::string& name,binFile& ma
 }
 int findLinks(std::vector<std::string>& toLink, const std::vector<binFile>& filesInfo,
 	const binFile& file, std::map<std::string,std::string>& syms, const bool idgaf,
-	std::vector<binFile>& binLink)
+	std::vector<binFile>& binLink, const std::string& wd)
 {
 
 	// syms : <sym_name, file_name>
@@ -169,8 +176,15 @@ int findLinks(std::vector<std::string>& toLink, const std::vector<binFile>& file
 					std::cout << "multiple definition of symbol: " << std::endl;
 					std::cout << file.callSyms[i] << std::endl;
 					std::cout << std::endl;
-					std::cout << "First definition in file: " << getName(syms[file.callSyms[i]]) << std::endl;
-					std::cout << "Second definition in file: " << getName(filesInfo[j].name) << std::endl;
+					std::ifstream file0(wd + "/" + reqFolders[1] + "/" + subFolders[0] + "/" + getNameNoExt(syms[file.callSyms[i]]));
+					std::string line;
+					std::getline(file0, line);
+					file0.close();
+					std::cout << "First definition in file: " << getName(line) << std::endl;
+					std::ifstream file1(wd + "/" + reqFolders[1] + "/" + subFolders[0] + "/" + getNameNoExt(filesInfo[j].name));
+					std::getline(file1, line);
+					file1.close();
+					std::cout << "Second definition in file: " << getName(line) << std::endl;
 					std::cout << std::endl;
 					std::cout << "You can choose not to link files forcibly by using the flag: --no-link-force [filename]" << std::endl;
 					std::cout << "Or you can run builder with --idgaf flag to ignore this error" << std::endl;
@@ -183,7 +197,7 @@ int findLinks(std::vector<std::string>& toLink, const std::vector<binFile>& file
 					toLink.push_back(filesInfo[j].name);
 					binLink.push_back(filesInfo[j]);
 					syms[file.callSyms[i]] = filesInfo[j].name;
-					findLinks(toLink, filesInfo, filesInfo[j], syms, idgaf, binLink);
+					findLinks(toLink, filesInfo, filesInfo[j], syms, idgaf, binLink,wd);
 				}
 			}
 		}
@@ -197,7 +211,6 @@ std::string link(const std::string& wd,
 	const bool log, const int linkType, const bool relink,
 	const bool idgaf, const std::vector<std::string>& allLibs)
 {
-
 	if(toCompile.size() == 0 && exists(parameters[1]) && !relink)
 		return "nothing to link";
 	std::vector<std::string> toLink = toLinkList(parameters,wd,idgaf, allLibs);
@@ -231,20 +244,6 @@ std::string link(const std::string& wd,
 		std::string cmd = "rm " + parameters[1];
 		system(cmd.c_str());
 	}
-	if(!log){
-		std::cout << std::endl;
-		for(int i = 0; i < toLink.size(); ++i){ // очень криво
-			std::ifstream file(wd + "/" + reqFolders[1] + "/" + subFolders[0] + "/" + getNameNoExt(toLink[i]));
-			std::string line;
-			std::getline(file, line);
-			file.close();
-			std::cout << "Linking file: " << getName(line) << std::endl;
-		}
-		for(int i = 0; i < libsToLink.size(); ++i)
-			std::cout << "Linking lib: " << getName(libsToLink[i]) << std::endl;
-		std::cout << std::endl;
-	}
-
 	auto it = toLink.begin();
 	while(it != toLink.end()){
 		bool erase = false;
@@ -258,6 +257,20 @@ std::string link(const std::string& wd,
 			}
 		}
 		if(!erase) it++;
+	}
+
+	if(!log){
+		std::cout << std::endl;
+		for(int i = 0; i < toLink.size(); ++i){ // очень криво
+			std::ifstream file(wd + "/" + reqFolders[1] + "/" + subFolders[0] + "/" + getNameNoExt(toLink[i]));
+			std::string line;
+			std::getline(file, line);
+			file.close();
+			std::cout << "Linking file: " << getName(line) << std::endl;
+		}
+		for(int i = 0; i < libsToLink.size(); ++i)
+			std::cout << "Linking lib: " << getName(libsToLink[i]) << std::endl;
+		std::cout << std::endl;
 	}
 
 	if(linkType == 0 || linkType == 2){

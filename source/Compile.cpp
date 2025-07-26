@@ -5,6 +5,7 @@ std::mutex mtx;
 // Структура dep файла:
 // путь к описываемому файлу
 // время изменения описываемого файла
+// все файлы от которых файл зависит
 // все зависимости (файлы которые зависят от текущего)
 
 std::vector<std::string> compile(const std::string& wd,const std::vector<std::string>& parameters,
@@ -23,8 +24,7 @@ std::vector<std::string> compile(const std::string& wd,const std::vector<std::st
     auto SDdirs = getDirs(bd + "/" + subFolders[0]);
     //Обновления списка зависимостей
     int code = 0;
-    if(changeSet) code = UpdateDependencies(HDdirs, SDdirs, bd, id, allHeaders, allSource);
-    
+    UpdateDependencies(HDdirs, SDdirs, bd, id, allHeaders, allSource);
     code |= updateFiles(toCompile, HDdirs, SDdirs); // создание списка toCompile
     if(code != 0) return std::vector<std::string>{};
     int m = (toCompile.size() / numThreads) + 1;
@@ -98,7 +98,8 @@ void compileFile(const std::string& path,
     out << depfile[0] << std::endl;
     if(code == 0) out << getChangeTime(depfile[0]) << std::endl;
     else out << "-1" << std::endl;
-    if(depfile.size() > 2) out << depfile[2];
+    out << depfile[2] << std::endl;
+    out << depfile[3] << std::endl;
     out.close();
 }
 void oneThreadCompile(const std::vector<std::string>& toCompile, 

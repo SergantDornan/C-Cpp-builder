@@ -3,7 +3,7 @@ bool createDepfiles(const std::string&,
 	const std::vector<std::string>&,const std::vector<std::string>&,
 	const bool);
 
-int UpdateDependencies(const std::vector<std::string>&,
+void UpdateDependencies(const std::vector<std::string>&,
 	const std::vector<std::string>&,const std::string&, const std::string&,
     const std::vector<std::string>&,const std::vector<std::string>&);
 
