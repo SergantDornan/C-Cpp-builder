@@ -262,9 +262,9 @@ void FindForceLinkUnlink(std::vector<std::string>& args,
 	auto it = args.begin();
 	while(it != args.end()){
 		if((*it).size() > 2 && isFlag(*it) && (*it)[1] == 'l' && (*it) != "-log"){
-			std::string shortname = std::string((*it).begin() + 2, (*it).end());
-			if(find(newv, shortname) == -1) {
-				newv.push_back(shortname);
+			//std::string shortname = std::string((*it).begin() + 2, (*it).end());
+			if(find(newv, *it) == -1) {
+				newv.push_back(*it);
 				newfLinkSize++;
 			}
 			args.erase(it);
@@ -282,7 +282,7 @@ void FindForceLinkUnlink(std::vector<std::string>& args,
 	if(parameters[6] != "-1") AddInc = split(parameters[6]);
 	if(parameters[14] != "-1") fUnInc = split(parameters[14]);
 	for(int i = 0; i < newv.size(); ++i){
-		if(getExt(newv[i]) != ""){
+		if(newv[i].size() < 2 || (newv[i].size() >= 2 && newv[i][0] != '-' && newv[i][1] != 'l')){
 			std::vector<std::string> result;
 			findFile(result, newv[i], cd, AddInc, fUnInc);
 			if(result.size() == 0){
@@ -310,6 +310,8 @@ void FindForceLinkUnlink(std::vector<std::string>& args,
 			newv[i] = result[0];
 		}
 		else{
+			std::string shortname = std::string((newv[i]).begin() + 2, (newv[i]).end());
+			newv[i] = shortname;
 			std::vector<std::string> result;
 			if(i < newfLinkSize){
 				bool erase = false;
@@ -320,7 +322,9 @@ void FindForceLinkUnlink(std::vector<std::string>& args,
 					// std::cerr << "Cannot find files lib" << newv[i] << ".so or lib" << newv[i] << ".a" << std::endl;
 					// std::cerr << "You specified \"" << newv[i] << "\" in force-link list, belder thinks it is a library";
 					// return;
-					parameters[11] += (" -l" + newv[i]);
+					if(parameters[11] == "-1") parameters[11] = (" -l" + newv[i]);
+					else if(parameters[11].find("-l" + newv[i]) == std::string::npos) 
+						parameters[11] += (" -l" + newv[i]);
 					erase = true;
 				}
 				else if(result.size() > 1){
@@ -366,7 +370,6 @@ void FindForceLinkUnlink(std::vector<std::string>& args,
 		if(*it == "-1") newv.erase(it);
 		else it++;
 	}
-
 	for(int i = 0; i < newv.size(); ++i){
 		if(i < newfLinkSize){
 			if(isLib(newv[i])){

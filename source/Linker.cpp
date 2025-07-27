@@ -286,31 +286,20 @@ std::string link(const std::string& wd,
 		}
 		std::string cmd = compiler;
 		if(linkType == 2) cmd += "-shared ";
+		for(int i = 0; i < toLink.size(); ++i) cmd += (toLink[i] + " ");
 		for(int i = 11; i <= 12; ++i){
 			if(parameters[i] != "-1")
 				cmd += (parameters[i] + " ");
 		}
-		for(int i = 0; i < toLink.size(); ++i)
-			cmd += (toLink[i] + " ");
-		for(int i = 0; i < libsToLink.size(); ++i)
-			cmd += (libsToLink[i] + " ");
+		for(int i = 0; i < libsToLink.size(); ++i) cmd += (libsToLink[i] + " ");
 		cmd += (" -o " + parameters[1]);
-		if(log){
-			std::cout << "Linking:" << std::endl;
-			std::cout << std::endl;
-			std::cout << cmd << std::endl;
-		}
+		if(log) std::cout << cmd << std::endl;
 		system(cmd.c_str());
 	}
 	else if(linkType == 1){ // статическая библиотека
 		std::string cmd = "ar rcs " + parameters[1] + " ";
-		for(int i = 0; i < toLink.size(); ++i)
-			cmd += (toLink[i] + " ");
-		if(log){
-			std::cout << std::endl;
-			std::cout << "Linking" << std::endl;
-			std::cout << cmd << std::endl;
-		}
+		for(int i = 0; i < toLink.size(); ++i) cmd += (toLink[i] + " ");
+		if(log) std::cout << cmd << std::endl;
 		system(cmd.c_str());
 	}
 	else{
