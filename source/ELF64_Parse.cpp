@@ -58,7 +58,9 @@ void process_symbol_table64(Elf64_parse_result& result, unsigned char* elf,
             result.defSyms.push_back(symbol_name);
         }
 
-        if(symbol_type == 0 && symbol_section_index == 0 && (symbol_bind == 1 || symbol_bind == 2)){
+        if(symbol_type == 0 && symbol_section_index == 0 
+            && (symbol_bind == 1 || symbol_bind == 2)
+            ){
             // symbol_type == 0 => type == NOTYPE, то есть не знаем какой тип
             // symbol_section_index == 0 => не определено ни в одной секции
             // symbol_bind == 1 || symbol_bind == 2 - GLOBAL или WEAK

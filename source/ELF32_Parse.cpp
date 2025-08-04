@@ -55,7 +55,8 @@ void process_symbol_table32(Elf32_parse_result& result, unsigned char* elf, Elf3
         }
 
         if(symbol_type == 0 && symbol_section_index == 0 
-            && (symbol_bind == 1 || symbol_bind == 2))
+            && (symbol_bind == 1 || symbol_bind == 2)
+            )
         {
             // symbol_type == 0 => type == NOTYPE, то есть не знаем какой тип
             // symbol_section_index == 0 => не определено ни в одной секции

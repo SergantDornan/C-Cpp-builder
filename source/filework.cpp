@@ -168,11 +168,11 @@ std::string getChangeTime(const std::string& path){
     const char *filename = path.c_str();
     struct stat fileInfo;
     if (stat(filename, &fileInfo) != 0) {
-        std::cerr << "===================== ERROR =====================" << std::endl;
-        std::cerr << "filework.cpp: getChangeTime()" << std::endl;
-        std::cerr << "Error getting file information: " << filename << std::endl;
-        std::cerr << std::endl;
-        return "";
+        // std::cerr << "===================== ERROR =====================" << std::endl;
+        // std::cerr << "filework.cpp: getChangeTime()" << std::endl;
+        // std::cerr << "Error getting file information: " << filename << std::endl;
+        // std::cerr << std::endl;
+        return "0";
     }
     time_t modificationTime = fileInfo.st_mtime;
     return formatTime(modificationTime);
