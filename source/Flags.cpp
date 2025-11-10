@@ -61,10 +61,10 @@ std::vector<std::string> getParameters(std::vector<std::string>& args,
 		else
 			it++;
 	}
-	getAddDirs(args, parameters);
+	getAddDirs(args,cd, parameters);
 	getSpecFlags(args, parameters[10], "--compile-flags");
 	getSpecFlags(args, parameters[11], "--link-flags");
-	FindForceLinkUnlink(args, parameters);
+	FindForceLinkUnlink(args,cd, parameters);
 	getRestFlags(args, parameters[12]);
 	auto compilers = split(parameters[5]);
 	getNameAfterFlag(args, "--CC", compilers[0]);
@@ -120,7 +120,7 @@ void getRestFlags(const std::vector<std::string>& args, std::string& s){
 		}
 	}
 }
-void getAddDirs(std::vector<std::string>& args, std::vector<std::string>& parameters){
+void getAddDirs(std::vector<std::string>& args,const std::string& cd, std::vector<std::string>& parameters){
 	
 	std::vector<std::string> AddInc, fUnInc, defInc;
 	if(parameters[6] != "-1") AddInc = split(parameters[6]);
@@ -250,7 +250,7 @@ int getNamesAfterFlag(std::vector<std::string>& args,
 	}
 	return size;
 }
-void FindForceLinkUnlink(std::vector<std::string>& args,
+void FindForceLinkUnlink(std::vector<std::string>& args,const std::string& cd,
 	std::vector<std::string>& parameters)
 {
 	// Считываение новых имен

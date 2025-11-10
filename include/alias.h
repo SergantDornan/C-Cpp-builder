@@ -1,7 +1,7 @@
 #ifndef ALIAS
 #define ALIAS
 
-#include "BuilderFilework.h"
+#include "filework.h"
 const std::vector<std::string> configFiles = {getHomedir() + "/.bashrc", 
 	getHomedir() + "/.zshrc", getHomedir() + "/.config/fish/config.fish"};
 std::vector<std::string> findConfig();

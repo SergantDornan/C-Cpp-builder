@@ -47,6 +47,8 @@ void addAlias(const std::string& alias, const std::string& cmd){
 		std::ofstream bshrc(config[i], std::ios::app);
     	bshrc << line << std::endl;
     	bshrc.close();
+    	std::string cmd = "source " + config[i];
+    	system(cmd.c_str());
 	}
 }
 void removeAlias(const std::string& alias, const std::string& cmd){
@@ -78,5 +80,7 @@ void removeAlias(const std::string& alias, const std::string& cmd){
     	for(int i = 0; i < v.size(); ++i)
         	newfile << v[i] << std::endl;
     	newfile.close();
+    	std::string cmd = "source " + config[i];
+    	system(cmd.c_str());
 	}
 }

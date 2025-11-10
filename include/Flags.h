@@ -1,7 +1,7 @@
 #ifndef FLAGSH
 #define FLAGSH
 
-#include "BuilderFilework.h"
+#include "filework.h"
 const std::vector<std::string> possibleFlags = {"--rebuild", "-reb", 
 	"-o", "--no-link-force", "--link-force", "--default-link",
 	"--no-link-lib", "--CC", "--CXX", "--compile-flags", "--link-flags", "--clear-flags",
@@ -12,7 +12,7 @@ const std::vector<std::string> keyWords = {"run", "status", "help", "config"};
 bool isFlag(const std::string&);
 std::vector<std::string> getParameters(std::vector<std::string>&,
 	const std::string& , const std::string&, const std::string&);
-void getAddDirs(std::vector<std::string>&, std::vector<std::string>&);
+void getAddDirs(std::vector<std::string>&,const std::string&, std::vector<std::string>&);
 int findEntryFile(const std::vector<std::string>&,
 	const std::string&,  std::vector<std::string>&);
 void getNameAfterFlag(const std::vector<std::string>&,
@@ -24,6 +24,6 @@ bool isDebug(const std::string&);
 bool isStandart(const std::string&);
 int getNamesAfterFlag(std::vector<std::string>&,const std::string&,
 	std::vector<std::string>&);
-void FindForceLinkUnlink(std::vector<std::string>&,std::vector<std::string>&);
+void FindForceLinkUnlink(std::vector<std::string>&,const std::string&,std::vector<std::string>&);
 bool isLib(const std::string&);
 #endif
