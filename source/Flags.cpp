@@ -261,7 +261,7 @@ void FindForceLinkUnlink(std::vector<std::string>& args,const std::string& cd,
 	int newfLinkSize = getNamesAfterFlag(args, "--link-force", newv);
 	auto it = args.begin();
 	while(it != args.end()){
-		if((*it).size() > 2 && isFlag(*it) && (*it)[1] == 'l' && (*it) != "-log"){
+		if((*it).size() > 2 && std::string((*it).begin(), (*it).begin() + 2) == "-l" && (*it) != "-log"){
 			//std::string shortname = std::string((*it).begin() + 2, (*it).end());
 			if(find(newv, *it) == -1) {
 				newv.push_back(*it);
@@ -282,7 +282,7 @@ void FindForceLinkUnlink(std::vector<std::string>& args,const std::string& cd,
 	if(parameters[6] != "-1") AddInc = split(parameters[6]);
 	if(parameters[14] != "-1") fUnInc = split(parameters[14]);
 	for(int i = 0; i < newv.size(); ++i){
-		if(newv[i].size() < 2 || (newv[i].size() >= 2 && newv[i][0] != '-' && newv[i][1] != 'l')){
+		if(newv[i].size() < 2 || (newv[i].size() >= 2 && std::string(newv[i].begin(), newv[i].begin() + 2) != "-l")){
 			std::vector<std::string> result;
 			findFile(result, newv[i], cd, AddInc, fUnInc);
 			if(result.size() == 0){
