@@ -71,6 +71,31 @@ int main(int argc, char* argv[]){
 	}
 	std::vector<std::string> args;
 	for(int i = 1; i < argc; ++i) args.push_back(std::string(argv[i]));
+
+	// Переделываем текущую директорию:
+	auto it = args.begin();
+	while(it != args.end()){
+		if(*(it) == "-c"){
+			if((it+1) == args.end() || isFlag(*(it+1))){
+				std::cout << "No directory after -c flag" << std::endl;
+				std::cout << std::endl;
+				return 1;
+			}
+			if(!exists(*(it+1))){
+				std::cout << *(it+1) << " does not exist" << std::endl;
+				std::cout << std::endl;
+				return 1;
+			}
+			std::string newcd = getFullPath(cd,*(it+1));
+			if(newcd[newcd.size() - 1] == '/') cd = std::string(newcd.begin(), newcd.end()-1);
+			else cd = newcd;
+			args.erase(it+1);
+			args.erase(it);
+		}
+		else it++;
+	} 
+	// --------------------------------
+
 	if(args.size() != 0 && args[0] == "help"){
 		printHelp();
 		return 0;

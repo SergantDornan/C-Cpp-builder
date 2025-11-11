@@ -53,6 +53,7 @@ void printHelp(){
 	std::cout << "\t--clear-flags, --clean-flags, --flags-clean, --flags-clear\tclears all flags" << std::endl;
 	std::cout << std::endl;
 	std::cout << "\t--clear-options, --clean-options\tReset force-link, force-unlink, additional directories, no-include directories lists" << std::endl;
+	std::cout << "\t-c\tChange directory in which belder will work" << std::endl;
 	std::cout << std::endl;
 }
 void printStatus(const std::vector<std::string>& parameters){

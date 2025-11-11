@@ -3,7 +3,8 @@
 #include "algs.h"
 #include "filework.h"
 extern const std::vector<std::string> reqFolders, subFolders;
-extern const std::string root, cd, configFile;
+extern const std::string root, configFile;
+extern std::string cd;
 extern const bool pocket;
 
 void getAllheaders(std::vector<std::string>&,const std::string&,const std::vector<std::string>&,

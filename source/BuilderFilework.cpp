@@ -1,7 +1,7 @@
 #include "BuilderFilework.h"
 // Следующая строка заполняется инсталлятором, не менять ее
 const std::string root = getHomedir() + "/builder";
-const std::string cd = cwd();
+std::string cd = cwd();
 const bool pocket = (root == "./builder");
 const std::string configFile = "config";
 const std::vector<std::string> reqFolders = {"headers","source","sym"}; // Если меньше двух имен - будет SegFault
