@@ -46,7 +46,10 @@ int main(int argc, char* argv[]) {
         rewriteLine(cd + "/source/BuilderFilework.cpp",
             "const std::string root = getHomedir() + \"/builder\";",
             "const std::string root = \"./builder\";");
-    if(!pocket) addAlias("belder", root + "/builder");
+    if(!pocket) {
+        addAlias("belder", root + "/builder");
+        addAlias("sudo belder", "sudo " + root + "/builder");
+    }
     cmd = "make -C " + cd + " -j " + std::to_string(numThreads);
     int code = system(cmd.c_str());
     if(exists(root) && !pocket && code == 0){
