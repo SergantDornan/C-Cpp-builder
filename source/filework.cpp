@@ -1,25 +1,38 @@
 #include <filework.h>
-std::string getFullPath(std::string cd, std::string relpath){
-    if(relpath[relpath.size()-1] == '.') relpath += '/';
-    if(cd[(cd.size()-1)] == '/') cd = std::string(cd.begin(), cd.end()-1);
-    if(relpath.size() >= 2 && relpath[0] == '.' && relpath[1] == '/')
-        return (cd + std::string(relpath.begin() + 1, relpath.end()));
-    bool b = false;
-    while(relpath.size() >= 3 && relpath[0] == '.' && relpath[1] == '.' && relpath[2] == '/'){
-        b = true;
-        if(getFolder(cd) == ""){
-            std::cerr << "======================== ERROR ========================" << std::endl;
-            std::cerr << "filework.cpp: cannot convert relative path to full path" << std::endl;
-            std::cerr << "Current directory: " << cd << std::endl;
-            std::cerr << "relative path: " << relpath << std::endl;
-            std::cerr << std::endl;
-            return "-1";
-        }
-        cd = getFolder(cd);
-        relpath = std::string(relpath.begin() + 3, relpath.end());
+std::string getFullPath(const std::string& cd_, const std::string& relpath_)
+{
+    std::string cd = cd_;
+    std::string relpath = relpath_;
+    if(cd.size() == 0 && relpath.size() == 0){
+        std::cerr << "======================== ERROR ========================" << std::endl;
+        std::cerr << "filework.cpp: getFullPath, cd.size() = 0 or relpath.size() = 0" << std::endl;
+        std::cerr << std::endl;
+        return "-1";
     }
-    if(b) return (cd + "/" + relpath);
-    else return relpath;
+    bool absolute = (relpath[0] == '/');
+    if(cd[(cd.size()-1)] == '/') cd.erase(cd.end()-1);
+    auto s = split(relpath, "/");
+    for(int i = 0; i < s.size(); ++i){
+        if(s[i] == ".") {
+            absolute = false;
+            continue;
+        }
+        if(s[i] == ".."){
+            absolute = false;
+            if(getFolder(cd) == ""){
+                std::cerr << "======================== ERROR ========================" << std::endl;
+                std::cerr << "filework.cpp: cannot convert relative path to full path" << std::endl;
+                std::cerr << "Current directory: " << cd_ << std::endl;
+                std::cerr << "relative path: " << relpath_ << std::endl;
+                std::cerr << std::endl;
+                return "-1";
+            }
+            cd = getFolder(cd);
+        }
+        else cd += ("/" + s[i]);
+    }
+    if(absolute) return relpath_;
+    else return cd;
 }
 
 void findFile(std::vector<std::string>& result,
@@ -43,23 +56,24 @@ void findFile(std::vector<std::string>& result,
     }
     // Не нашли по полному пути => было только имя, ищем по нему
     // Проход по dir
+
     auto dirs = getDirs(dir);
     for(int i = 1; i < dirs.size(); ++i){
-        if(dirs[i].find(name) != std::string::npos && 
-            (dirs[i].find(name) == (dirs[i].size() - name.size())) &&
+        if(dirs[i].find(name0) != std::string::npos && 
+            (dirs[i].find(name0) == (dirs[i].size() - name0.size())) &&
             find(result, dirs[i]) == -1) result.push_back(dirs[i]);
         if(std::filesystem::is_directory(dirs[i]) && 
-            find(fUnInc, dirs[i]) == -1) findFile(result, name, dirs[i], {}, fUnInc);
+            find(fUnInc, dirs[i]) == -1) findFile(result, name0, dirs[i], {}, fUnInc);
     }
     // Проход по всем AddInc
     for(int i = 0; i < AddInc.size(); ++i){
         auto addDirs = getDirs(AddInc[i]);
         for(int j = 1; j < addDirs.size(); ++j){
-            if(addDirs[j].find(name) != std::string::npos &&
-                (addDirs[j].find(name) == (addDirs[j].size() - name.size())) &&
+            if(addDirs[j].find(name0) != std::string::npos &&
+                (addDirs[j].find(name0) == (addDirs[j].size() - name0.size())) &&
                 find(result, addDirs[j]) == -1) result.push_back(addDirs[j]);
             if(std::filesystem::is_directory(addDirs[j]) &&
-                find(fUnInc, addDirs[j]) == -1) findFile(result, name, addDirs[j], {}, fUnInc);
+                find(fUnInc, addDirs[j]) == -1) findFile(result, name0, addDirs[j], {}, fUnInc);
         }
     }
 }
@@ -214,7 +228,7 @@ std::string getName(const std::string& path){
         if(path[i] == '/')
             return std::string(path.begin() + i + 1, path.end()); 
     }
-    return "";
+    return path;
 }
 std::string getFolder(const std::string& path){
     for(int i = path.size() - 1; i >= 0; --i){

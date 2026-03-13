@@ -1,5 +1,5 @@
 #include "essentials.h"
-void removeBuildFolder(){
+void removeBuildFolder(const std::string& currDir, bool silent){
 	std::string configPath = root + "/" + configFile;
 	std::ifstream config(configPath);
 	std::string line;
@@ -9,10 +9,10 @@ void removeBuildFolder(){
 	config.close();
 	auto it = lines.begin();
 	while(it != lines.end()){
-		if(split(*it, "*")[0] == cd){
+		if(split(*it, "*")[0] == currDir){
 			std::string cmd = "rm -rf " + root + "/" + split(*it, "*")[1];
 			system(cmd.c_str());
-			std::cout << root << "/" << split(*it, "*")[1] << " has been removed" << std::endl; 
+			if(!silent) std::cout << root << "/" << split(*it, "*")[1] << " has been removed" << std::endl; 
 			lines.erase(it);
 			std::ofstream f(configPath);
 			for(int i = 0; i < lines.size(); ++i)
@@ -144,7 +144,7 @@ std::string createEssentials(const bool reb){
 			out << "-1" << std::endl; // 4 force unlink list
 			out << "default default" << std::endl; // 5 compilers (C, C++)
 			out << "-1" << std::endl; // 6 additional -I list
-			out << "-1" << std::endl; // 7 C standart
+			out << "-1" << std::endl; // 7 C++ standart
 			out << "-1" << std::endl; // 8 optimization flag
 			out << "-1" << std::endl; // 9 debug flag
 			out << "-1" << std::endl; // 10 Flags to compiler
@@ -152,6 +152,7 @@ std::string createEssentials(const bool reb){
 			out << "-1" << std::endl; // 12 general Flags
 			out << "-1" << std::endl; // 13 force Unlink Libs
 			out << "-1" << std::endl; // 14 force unlink dirs
+			out << "-1" << std::endl; // 15 C standart
 			out.close();
 		}
 	}

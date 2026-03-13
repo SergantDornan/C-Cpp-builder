@@ -14,8 +14,11 @@ void printHelp(){
 	std::cout << "\tstatus\ttype \"belder status\" to see all information about project (flags, force-link and force-unlink list etc)" << std::endl;
 	std::cout << std::endl;
 	std::cout << "\tclear, clean, mrproper\tremove build folder (with object files, dep files, configs)" << std::endl;
+	std::cout << "\tsilent_clear\tremove build folder with no output" << std::endl;
 	std::cout << std::endl;
 	std::cout << "FLAGS:" << std::endl;
+	std::cout << "\t-T [num]\t specify number of threads to use" << std::endl;
+	std::cout << std::endl;
 	std::cout << "\t-log\toutput executed commands to console" << std::endl;
 	std::cout << std::endl;
 	std::cout << "\t--rebuild, -reb\trecompile all files" << std::endl;
@@ -23,6 +26,8 @@ void printHelp(){
 	std::cout << "\t--relink, -rel\trelink output file" << std::endl;
 	std::cout << std::endl;
 	std::cout << "\t-o [filename]\tspecify output file name" << std::endl;
+	std::cout << std::endl;
+	std::cout << "\t-C [directory]\tspecify directory in witch builder will be launched" << std::endl;
 	std::cout << std::endl;
 	std::cout << "\t--no-link-force [file] [file] [file]\tspecify files that definitely will not be linked" << std::endl;
 	std::cout << "\t\tbelder --no-link-force file1.cpp file2.cpp libMylib.a (exmp)" << std::endl;
@@ -53,7 +58,10 @@ void printHelp(){
 	std::cout << "\t--clear-flags, --clean-flags, --flags-clean, --flags-clear\tclears all flags" << std::endl;
 	std::cout << std::endl;
 	std::cout << "\t--clear-options, --clean-options\tReset force-link, force-unlink, additional directories, no-include directories lists" << std::endl;
-	std::cout << "\t-c\tChange directory in which belder will work" << std::endl;
+	std::cout << "\t--CXX [c++ compiler]" << std::endl;
+	std::cout << "\t--CC [c compiler]" << std::endl;
+	std::cout << "\t--C++standart [c++ standart]" << std::endl;
+	std::cout << "\t--Cstandart [c standart]" << std::endl;
 	std::cout << std::endl;
 }
 void printStatus(const std::vector<std::string>& parameters){
@@ -73,7 +81,9 @@ void printStatus(const std::vector<std::string>& parameters){
 	std::cout << "CPP compiler:	" << ((compilers[1] == "default") ? "g++" : compilers[1]) << std::endl;
 	
 	if(parameters[7] != "-1")
-		std::cout << "Standart: " << parameters[7] << std::endl;
+		std::cout << "C++ Standart: " << parameters[7] << std::endl;
+	if(parameters[15] != "-1")
+		std::cout << "C Standart: " << parameters[15] << std::endl;
 	if(parameters[8] != "-1")
 		std::cout << "Opt: " << parameters[8] << std::endl;
 	if(parameters[9] != "-1")

@@ -1,18 +1,22 @@
-# installation
-```
+# Installation and tests
+```bash
 make install #install builder
 ```
 
-```
+```bash
 make pocket # build pocketbuilder
 ```
 
-```
+```bash
 belder uninstall #uninstall builder
 ```
 
-```
+```bash
 belder reinstall #reinstall builder
+```
+
+```bash
+make test # launch tests for belder to see if all functions work correctly
 ```
 # builder
 
@@ -30,48 +34,48 @@ builder only works with libraries and files with .h, .hpp, .c, .cpp, .s, .S, .as
 The belder does not work if your assembly files contain not C-style comments
 
 
-```
+```bash
 belder file.cpp  # starting file - file.cpp
 belder #builder will look for main.cpp or main.c
 ```
 the builder remembers the latest settings and the entered flags, so if you just enter a command without flags or arguments, the build will go the same way as the last time
 
 if you write a "config" right after the "belder" and add flags, then you will simply update the settings without building. Next time, without arguments, the build will go through with these settings.
-``` 
+```bash
 belder config --no-link-force file.cpp -lmyLib -o out # just updating config
 ```
 Type "belder help" to get list of instructions and flags
-```
+```bash
 belder help
 ```
 You can type "run" in any place to run program after build
-```
+```bash
 belder run -o out # will run a program
 ```
 Type "belder status" to see all the current settings for a project
-```
+```bash
 belder status # will type all current settings
 ```
 Type "clean","mrproper" or "clear" to remove folder with object and dep files for your project
-```
+```bash
 belder clean
 belder mrproper
 belder clear
 ```
 
 To uninstall builder simply type:
-```
+```bash
 belder uninstall
 ```
 To recompile belder itself type:
-```
+```bash
 belder reinstall # only works if you still got original source code
 ```
 
 # creating library
 If the name of the output file matches the standards of the static or shared library name, you will get the library at the output
 
-```
+```bash
 belder start.cpp -o libMylib.a # will create a static library
 belder start.cpp -o libMylib.so # will create a shared library
 ```
@@ -80,7 +84,7 @@ belder start.cpp -o libMylib.so # will create a shared library
 
 If you install pocketbuilder with command
 
-```
+```bash
 make pocket
 ```
 
@@ -98,31 +102,36 @@ Then you will get a binary file "pocketbuilder". You can copy this binary file t
 -o [filename] specify output file name
 
 --no-link-force [file] [file] [file] specify files that definitely will not be linked
-```
+
+-T [num] specify number of threads to use
+
+-C [directory] specify directory in witch builder will be launched
+
+```bash
 belder --no-link-force file1.cpp file2.cpp libMylib.a
 belder --no-link-force Mylib # "Mylib" will be considered as a library, so the two files will not be linked: libMylib.a, libMylib.so
 ```
 
 --link-force [file] [file] [file] specify files that definitely will be linked
-```
+```bash
 belder --link-force file1.cpp file2.cpp libMylib.a
 belder --link-force Mylib # "Mylib" will be considered as a library. If belder finds both libMylib.a and libMylib.so then libMylib.so  will be linked
 ```
 
 --default-link [file] [file] [file] let belder decide whether to link files or not
-```
+```bash
 belder --default-link file1.cpp file2.cpp libMylib.a (exmp)
 belder --default-link Mylib # "Mylib" will be considered as a library, so the two files will be excluded from the force-link and force-unlink lists: libMylib.a, libMylib.so
 ```
 
 -l[short lib name] link libraries with -l flag and short library name
-```
+```bash
 belder -lMylib # is equivalent to "belder --link-force Mylib"
 ```
 
 --CC/CXX [compiler] Specify compiler. Type "default" to use standart gcc and g++ compiler
 
-```
+```bash
 belder config --CC /dir1/dir2/compiler # use custom compiler for C language
 belder config --CXX /dir1/dir2/compiler # use custom compiler for C++ language
 belder config --CC default # use standart gcc for C language

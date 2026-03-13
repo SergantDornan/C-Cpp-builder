@@ -35,6 +35,7 @@ std::vector<std::string> getParameters(std::vector<std::string>& args,
 	{
 		for(int i = 7; i <= 12; ++i)
 			parameters[i] = "-1";
+		parameters[15] = "-1";
 	}
 	if(clearOptions){
 		parameters[2] = "-1";
@@ -46,17 +47,48 @@ std::vector<std::string> getParameters(std::vector<std::string>& args,
 	}
 	auto it = args.begin();
 	while(it != args.end()){
-		if(isStandart(*it)){
-			parameters[7] = *it;
-			args.erase(it);
-		}
-		else if(isOpt(*it)){
+		//if(isStandart(*it)){
+		//	parameters[7] = *it;
+		//	args.erase(it);
+		//}
+		if(isOpt(*it)){
 			parameters[8] = *it;
 			args.erase(it);
 		}
 		else if(isDebug(*it)){
 			parameters[9] = *it;
 			args.erase(it);
+		}
+		else
+			it++;
+	}
+	it = args.begin();
+	while(it != args.end()){
+		if((*it) == "--C++standart"){
+			if((it != (args.end()-1)) && isStandart(*(it + 1))){
+				parameters[7] = *(it+1);
+				args.erase(it);
+				args.erase(it);
+			}
+			else{
+				std::cerr << "==================== ERROR ====================" << std::endl;
+				std::cerr << "No standart after --C++standart" << std::endl;
+				std::cerr << std::endl;
+				break;
+			}
+		}
+		else if((*it) == "--Cstandart"){
+			if((it != (args.end()-1)) && isStandart(*(it + 1))){
+				parameters[15] = *(it+1);
+				args.erase(it);
+				args.erase(it);
+			}
+			else{
+				std::cerr << "==================== ERROR ====================" << std::endl;
+				std::cerr << "No standart after --Cstandart" << std::endl;
+				std::cerr << std::endl;
+				break;
+			}
 		}
 		else
 			it++;
@@ -102,7 +134,7 @@ void getSpecFlags(std::vector<std::string>& args, std::string& s, const std::str
 			continue;
 		}
 		if(s == "-1") s = "";
-		if(s.find(*it) == std::string::npos)
+		//if(s.find(*it) == std::string::npos)
 			s += ((*it) + " ");
 		args.erase(it);
 	}

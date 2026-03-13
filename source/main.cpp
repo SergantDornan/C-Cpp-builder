@@ -5,6 +5,7 @@
 #include "Flags.h"
 #include "uninstall.h"
 #include "StatusCheck.h"
+#include "Mapping.h"
 
 // Следующая строка заполняется инсталлятором, не менять ее
 const std::string SourceCodeFolder;
@@ -27,37 +28,85 @@ const std::string SourceCodeFolder;
 // --clean-options, --clear-options - удалить все флаги, очиситить все force-link листы, AddInc листы и прочее 
 
 // Структура project config:
-// main input
-// outputname
-// libs linking
-// force link list
-// force unlink list
-// compilers
-// additional -I list
-// C standart
-// optimization
-// debug
-// Flags to compiler
-// Flags to linker
-// generalFlags
-// force unlink libs
-// force unlink dirs
+// main input 0
+// outputname 1
+// libs linking 2
+// force link list 3
+// force unlink list 4
+// compilers 5
+// additional -I list 6
+// C++ standart 7
+// optimization 8
+// debug 9
+// Flags to compiler 10
+// Flags to linker 11
+// generalFlags 12
+// force unlink libs 13
+// force unlink dirs 14
+// C standart 15
 
 int main(int argc, char* argv[]){
 	if(pocket && !exists(root)){
 		std::string cmd = "mkdir " + root;
 		system(cmd.c_str());
 	}
-	if(exists(root) && 
-		argc >= 2 && (std::string(argv[1]) == "clean" || std::string(argv[1]) == "clear" ||
-			std::string(argv[1]) == "mrproper"))
+
+	std::vector<std::string> args;
+	for(int i = 1; i < argc; ++i) args.push_back(std::string(argv[i]));
+
+	int numThreads = -1;
+	// Переделываем текущую директорию + ищем количество потоков:
+	auto it = args.begin();
+	while(it != args.end()){
+		if(*(it) == "-C"){
+			if((it+1) == args.end() || isFlag(*(it+1))){
+				std::cerr << "No directory after -C flag" << std::endl;
+				std::cerr << std::endl;
+				return 1;
+			}
+			if(!exists(*(it+1))){
+				std::cerr << *(it+1) << " does not exist" << std::endl;
+				std::cerr << std::endl;
+				return 1;
+			}
+			std::string newcd = getFullPath(cd,*(it+1));
+			if(newcd[newcd.size() - 1] == '/') cd = std::string(newcd.begin(), newcd.end()-1);
+			else cd = newcd;
+			args.erase(it+1);
+			args.erase(it);
+		}
+		else if(*(it) == "-T"){
+			if((it+1) == args.end() || isFlag(*(it+1))){
+				std::cerr << "No number after -T flag" << std::endl;
+				std::cerr << std::endl;
+				return 1;
+			}
+			if(!std::stoi(*(it + 1))) {
+				std::cerr << "No number after -T flag" << std::endl;
+				std::cerr << std::endl;
+				return 1;
+			}
+			numThreads = std::stoi(*(it+1));
+			args.erase(it+1);
+			args.erase(it);
+		}
+		else it++;
+	} 
+	// --------------------------------
+
+	bool clear = (find(args, "clean") != -1 || 
+					find(args, "clear") != -1 ||
+					find(args, "mrproper") != -1 ||
+					find(args, "silent_clear") != -1);
+
+	if(exists(root) && clear)
 	{
 		if(pocket){
 			std::string cmd = "rm -rf " + root;
 			system(cmd.c_str());
 			std::cout << root << " has been removed" << std::endl;
 		}
-		else removeBuildFolder();
+		else removeBuildFolder(cd, (find(args, "silent_clear") != -1));
 		return 0;
 	}
 	if(cd.find(' ') != std::string::npos || 
@@ -69,32 +118,6 @@ int main(int argc, char* argv[]){
 		std::cerr << "Shell will not understeand you while compiling" << std::endl;
 		return 1;
 	}
-	std::vector<std::string> args;
-	for(int i = 1; i < argc; ++i) args.push_back(std::string(argv[i]));
-
-	// Переделываем текущую директорию:
-	auto it = args.begin();
-	while(it != args.end()){
-		if(*(it) == "-c"){
-			if((it+1) == args.end() || isFlag(*(it+1))){
-				std::cout << "No directory after -c flag" << std::endl;
-				std::cout << std::endl;
-				return 1;
-			}
-			if(!exists(*(it+1))){
-				std::cout << *(it+1) << " does not exist" << std::endl;
-				std::cout << std::endl;
-				return 1;
-			}
-			std::string newcd = getFullPath(cd,*(it+1));
-			if(newcd[newcd.size() - 1] == '/') cd = std::string(newcd.begin(), newcd.end()-1);
-			else cd = newcd;
-			args.erase(it+1);
-			args.erase(it);
-		}
-		else it++;
-	} 
-	// --------------------------------
 
 	if(args.size() != 0 && args[0] == "help"){
 		printHelp();
@@ -125,7 +148,7 @@ int main(int argc, char* argv[]){
 		if(!pocket) cmd = "make install -C " + SourceCodeFolder;
 		else cmd = "make pocket -C " + SourceCodeFolder;
 		system(cmd.c_str());
-		if(pocket){
+		if(pocket && (SourceCodeFolder != cd)){
 			cmd = "rm pocketbuilder";
 			system(cmd.c_str());
 			cmd = "cp " + SourceCodeFolder + "/pocketbuilder " + cd;
@@ -206,11 +229,13 @@ int main(int argc, char* argv[]){
 			getAllLibs(allLibs,AddInc[i],fUnLib,fUnIncludeDirs);
 		}
 	}
- 	std::vector<std::string> includes;
-	getIncludes(includes,allHeaders,allSource,parameters[0],true);
-
+	
+	std::vector<FileNode> map;
+	std::vector<int> leaves = getMap(allHeaders,allSource,map);
+ 	std::vector<std::string> includes, dummy;
+	getIncludes(includes,dummy,map,leaves,parameters[0],true);
 	bool changeSet = createDepfiles(wd, allHeaders, allSource, log);
-	std::vector<std::string> toCompile = compile(wd,parameters,allHeaders,allSource,changeSet,log,linkType);
+	std::vector<std::string> toCompile = compile(wd,parameters,changeSet,log,linkType,map,leaves,numThreads);
 	updateSymfiles(wd, allLibs);
 	std::string linkmsg = link(wd, parameters, includes, toCompile, 
 		log, linkType, relink, idgaf, allLibs);

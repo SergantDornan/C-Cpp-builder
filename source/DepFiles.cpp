@@ -5,6 +5,7 @@
 // время изменения описываемого файла
 // все файлы от которых файл зависит (пути к настоящим файлам)
 // файлы которые зависят от текущего (пути к деп файлам)
+// Список папок, которые надо указать для компиляции с флагом -I
 
 std::vector<std::pair<std::string,bool>> getChanges(const std::vector<std::string>& oldV, 
     const std::vector<std::string>& newV){
@@ -36,7 +37,7 @@ void updateFile(std::vector<std::string>& toCompile,
         auto depFiles = split(v[3]); // Берем все файлы, которые зависят от текущего
         for(int i = 0; i < depFiles.size(); ++i){
             if(find(recCheck, getName(depFiles[i])) == -1) // Чтобы не было бесконечной рекурсии
-                updateFile(toCompile,depFiles[i], recCheck); // идем вниз по дереву зависимостей
+                updateFile(toCompile,depFiles[i],recCheck); // идем вниз по дереву зависимостей
         }
     }
 }
@@ -60,6 +61,7 @@ int updateFiles(std::vector<std::string>& toCompile,
                 out << getChangeTime(v[0]) << std::endl;
                 out << v[2] << std::endl;
                 out << v[3] << std::endl;
+                out << v[4] << std::endl;
                 out.close();
             }
             std::vector<std::string> recCheck;
@@ -72,14 +74,16 @@ int updateFiles(std::vector<std::string>& toCompile,
 void UpdateDependencies(const std::vector<std::string>& HDdirs,
 	const std::vector<std::string>& SDdirs,
 	const std::string& bd, const std::string& id,
-    const std::vector<std::string>& allHeaders, 
-    const std::vector<std::string>& allSource){
+    const std::vector<FileNode>& map,
+    const std::vector<int>& leaves){
+
 
     std::vector<std::string> dirs = std::vector<std::string>(HDdirs.begin() + 1, HDdirs.end()) 
         + std::vector<std::string>(SDdirs.begin() + 1, SDdirs.end());
     std::vector<std::string> changedFiles;
-    // file name: <файлы от которых зависит, файлы которые зависят от>
-    std::map<std::string, std::pair<std::vector<std::string>, std::vector<std::string>>> data;
+
+    // file name: <файлы от которых зависит, файлы которые зависят от, -I список>
+    std::map<std::string, std::vector<std::vector<std::string>>> data;
     for(int i = 0; i < dirs.size(); ++i){
         std::fstream file(dirs[i]);
         std::vector<std::string> v;
@@ -87,19 +91,21 @@ void UpdateDependencies(const std::vector<std::string>& HDdirs,
         while(std::getline(file,line)) v.push_back(line);
         file.close();
         if(getChangeTime(v[0]) != v[1]) changedFiles.push_back(v[0]);
-        std::vector<std::string> inc1, inc2;
+        std::vector<std::string> inc1, inc2, inc3;
         if(v[2] != "-1") inc1 = split(v[2]);
         if(v[3] != "-1") inc2 = split(v[3]);
-        data[v[0]] = std::pair<std::vector<std::string>, std::vector<std::string>>{inc1, inc2};
+        if(v[4] != "-1") inc3 = split(v[4]);
+        data[v[0]] = std::vector<std::vector<std::string>>{inc1, inc2, inc3};
     }
-
+    
     std::vector<std::string> addChangedFiles;
     for(int i = 0; i < changedFiles.size(); ++i){
-        std::vector<std::string> includes;
-        getIncludes(includes, allHeaders, allSource, changedFiles[i]);
-        std::vector<std::pair<std::string,bool>> changes = getChanges(data[changedFiles[i]].first, includes);
+        std::vector<std::string> includes, Ilist;
+        getIncludes(includes, Ilist, map, leaves, changedFiles[i]);
+        std::vector<std::pair<std::string,bool>> changes = getChanges(data[changedFiles[i]][0], includes);
         if(changes.size() > 0){
-            data[changedFiles[i]].first = includes;
+            data[changedFiles[i]][0] = includes;
+            data[changedFiles[i]][2] = Ilist;
             for(int j = 0; j < changes.size(); ++j){
                 if(find(addChangedFiles, changes[j].first) == -1) addChangedFiles.push_back(changes[j].first);
                 std::string pathToDepfile;
@@ -107,10 +113,10 @@ void UpdateDependencies(const std::vector<std::string>& HDdirs,
                     pathToDepfile = id + "/" + subFolders[0] + "/" + converPathToName(changedFiles[i]);
                 else
                     pathToDepfile = bd + "/" + subFolders[0] + "/" + converPathToName(changedFiles[i]);
-                if(changes[j].second) data[changes[j].first].second.push_back(pathToDepfile);
-                else data[changes[j].first].second.erase(
-                    std::find(data[changes[j].first].second.begin(),
-                    data[changes[j].first].second.end(), pathToDepfile));
+                if(changes[j].second) data[changes[j].first][1].push_back(pathToDepfile);
+                else data[changes[j].first][1].erase(
+                    std::find(data[changes[j].first][1].begin(),
+                    data[changes[j].first][1].end(), pathToDepfile));
             }
         }
     }
@@ -130,16 +136,22 @@ void UpdateDependencies(const std::vector<std::string>& HDdirs,
         std::ofstream out(pathToDepfile);
         out << changedFiles[i] << std::endl;
         out << time << std::endl;
-        if(data[changedFiles[i]].first.size() == 0) out << "-1" << std::endl;
+        if(data[changedFiles[i]][0].size() == 0) out << "-1" << std::endl;
         else{
-            for(int j = 0; j < data[changedFiles[i]].first.size(); ++j)
-                out << data[changedFiles[i]].first[j] << ' ';
+            for(int j = 0; j < data[changedFiles[i]][0].size(); ++j)
+                out << data[changedFiles[i]][0][j] << ' ';
             out << std::endl;
         }
-        if(data[changedFiles[i]].second.size() == 0) out << "-1" << std::endl;
+        if(data[changedFiles[i]][1].size() == 0) out << "-1" << std::endl;
         else{
-            for(int j = 0; j < data[changedFiles[i]].second.size(); ++j)
-                out << data[changedFiles[i]].second[j] << ' ';
+            for(int j = 0; j < data[changedFiles[i]][1].size(); ++j)
+                out << data[changedFiles[i]][1][j] << ' ';
+            out << std::endl;
+        }
+        if(data[changedFiles[i]][2].size() == 0) out << "-1" << std::endl;
+        else{
+            for(int j = 0; j < data[changedFiles[i]][2].size(); ++j)
+                out << data[changedFiles[i]][2][j] << ' ';
             out << std::endl;
         }
     }
@@ -196,7 +208,8 @@ bool createDepfiles(const std::string& wd,
 			newfile << "-1" << std::endl;
             newfile << "-1" << std::endl;
             newfile << "-1" << std::endl;
-			newfile.close();
+			newfile << "-1" << std::endl;
+            newfile.close();
 		}
 	}
 
@@ -211,7 +224,8 @@ bool createDepfiles(const std::string& wd,
 			newfile << "-1" << std::endl;
             newfile << "-1" << std::endl;
             newfile << "-1" << std::endl;
-			newfile.close();
+			newfile << "-1" << std::endl;
+            newfile.close();
 		}
 	}
 	return changeSet;

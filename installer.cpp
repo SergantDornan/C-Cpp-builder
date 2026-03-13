@@ -8,9 +8,7 @@ const std::string pocketOutput = "OUTPUT=./pocketbuilder";
 const size_t numThreads = std::thread::hardware_concurrency();
 int main(int argc, char* argv[]) {
     std::string standartOutput = "OUTPUT=" + root + "/builder";
-    bool pocket = false;
-    if(argc >= 2 && std::string(argv[1]) == "pocket")
-        pocket = true;
+    bool pocket = (argc >= 2 && std::string(argv[1]) == "pocket");
     if(pocket && exists("./pocketbuilder")){
         std::string cmd = "rm ./pocketbuilder";
         system(cmd.c_str());
@@ -35,13 +33,14 @@ int main(int argc, char* argv[]) {
         return -1;
     }
     std::string cmd;
-    std::string output;
-    if(pocket) output = pocketOutput;
-    else output = standartOutput;
+    std::string output = (pocket) ? (pocketOutput) : (standartOutput);
+
     rewriteLine(cd + "/source/main.cpp",
         "const std::string SourceCodeFolder;",
         std::string("const std::string SourceCodeFolder = \"" + cd + "\";"));
+    
     rewriteLine(cd + "/Makefile","OUTPUT=",output);
+    
     if(pocket)
         rewriteLine(cd + "/source/BuilderFilework.cpp",
             "const std::string root = getHomedir() + \"/builder\";",
@@ -75,7 +74,8 @@ int main(int argc, char* argv[]) {
         rewriteLine(cd + "/source/BuilderFilework.cpp",
             "const std::string root = \"./builder\";",
             "const std::string root = getHomedir() + \"/builder\";");
-    if(code == 0 && (exists(root + "/builder") || exists("./pocketbuilder")))
+
+    if(code == 0 && ((exists(root + "/builder") && !pocket) || (pocket && exists("./pocketbuilder"))))
         std::cout << "================= Builder has been installed =================" << std::endl;
     return 0;
 }

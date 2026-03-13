@@ -11,18 +11,19 @@ GENERALFLAGS=$(C++standart) -g3 -w
 CFLAGS=$(GENERALFLAGS) $(OPT) $(DEPFLAGS)
 CFILES=$(foreach D, $(SOURCEDIR), $(wildcard $(D)/*.cpp))
 OBJECTS=$(patsubst $(SOURCEDIR)%.cpp, $(deps)%.o, $(CFILES))
-DEPFILES= $(patsubst $(SOURCEDIR)%.cpp, $(deps)%.d, $(CFILES)) $(deps)/installer.d
-INSTALLOBJECTS= $(deps)/installer.o $(deps)/alias.o $(deps)/BuilderFilework.o $(deps)/uninstall.o $(deps)/filework.o $(deps)/algs.o
+DEPFILES= $(patsubst $(SOURCEDIR)%.cpp, $(deps)%.d, $(CFILES)) $(deps)/installer.d $(deps)/tests.d
+INSTALLOBJECTS= $(deps)/installer.o $(deps)/alias.o $(deps)/BuilderFilework.o $(deps)/uninstall.o $(deps)/filework.o $(deps)/algs.o $(deps)/Mapping.o
+
 
 all:$(OBJECTS)
 
 link:$(OUTPUT)
 
 pocket:$(INSTALLOUTPUT)
-	@./installer pocket
+	@$(INSTALLOUTPUT) pocket
 
 install:$(INSTALLOUTPUT)
-	@./installer
+	@$(INSTALLOUTPUT)
 
 $(INSTALLOUTPUT):$(INSTALLOBJECTS)
 	$(CPPC) $^ -o $@
@@ -31,7 +32,7 @@ $(OUTPUT):$(OBJECTS)
 	$(CPPC) $^ -o $@
 
 mrproper:
-	rm -rf $(OBJECTS) $(DEPFILES) $(INSTALLOBJECTS) $(INSTALLOUTPUT) ./pocketbuilder
+	rm -rf $(OBJECTS) $(DEPFILES) $(INSTALLOBJECTS) $(INSTALLOUTPUT) ./pocketbuilder $(TESTBIN)
 
 $(deps)/%.o:$(SOURCEDIR)/%.cpp
 	$(CPPC) $(CFLAGS) $(foreach D,$(INCDIR),-I$(D)) -c $< -o $@

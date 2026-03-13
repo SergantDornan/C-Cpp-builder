@@ -66,36 +66,29 @@ void getAllLibs(std::vector<std::string>& libs, const std::string& path,
 }
 
 void getIncludes(std::vector<std::string>& includes,
-    const std::vector<std::string>& allHeaders,
-    const std::vector<std::string>& allSource,
-    const std::string& path, bool all){
+    std::vector<std::string>& Ilist,
+    const std::vector<FileNode>& map,
+    const std::vector<int>& leaves,
+    const std::string& path, bool all)
+{
     std::string l;
     std::ifstream input(path);
     if (input.is_open()){
         while (std::getline(input, l)){
-            if(l.find("#include") != std::string::npos){
-                std::string s;
-                for(int j = 10; j < l.size() && l[j] != '>' && l[j] != '"'; ++j)
-                    s+=l[j];
-                std::string newline;
-                bool b = false;
-                for(int j = 0; j < allHeaders.size(); ++j){
-                    if(s == getName(allHeaders[j])){
-                        b = true;
-                        newline = allHeaders[j];
-                        break;
-                    }
-                }
-                for(int j = 0; j < allSource.size(); ++j){
-                    if(s == getName(allSource[j])){
-                        b = true;
-                        newline = allSource[j];
-                        break;
-                    }
-                }
-                if(b && find(includes, newline) == -1){
-                    includes.push_back(newline);
-                    if(all) getIncludes(includes,allHeaders,allSource,newline);
+            if(l.find("#include") != std::string::npos)
+            {
+                size_t incPos = l.find("#include");
+                size_t startQuote = l.find_first_of("\"<", incPos + 8); 
+                if (startQuote == std::string::npos) continue;
+                char closeSym = (l[startQuote] == '"') ? '"' : '>';
+                size_t endQuote = l.find(closeSym, startQuote + 1);
+                if (endQuote == std::string::npos) continue;
+                std::string s = l.substr(startQuote + 1, endQuote - startQuote - 1);
+                std::pair<std::string,std::string> pair = pathDecoder(s,map,leaves);
+                if(pair.first != "-1" && find(includes, pair.first) == -1){
+                    includes.push_back(pair.first);
+                    if(find(Ilist, pair.second) == -1) Ilist.push_back(pair.second);
+                    if(all) getIncludes(includes,Ilist,map,leaves,pair.first,all);
                 }
             }
         }

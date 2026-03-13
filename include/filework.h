@@ -12,6 +12,7 @@
 #include <time.h>
 #include <iomanip>
 #include <sstream>
+#include "algs.h"
 std::vector<std::string> getDirs(const std::string&); 
 // Выдает список файлов и папок, аналогично ls, только путь полный относительно папки, 
 // откуда вызывается функция
@@ -35,7 +36,7 @@ void findFile(std::vector<std::string>&,
 	const std::string&,const std::string&,
 	const std::vector<std::string>&,
 	const std::vector<std::string>&);
-std::string getFullPath(std::string, std::string);
+std::string getFullPath(const std::string&,const std::string&);
 void rewriteLine(const std::string&,const std::string&,const std::string&);
 bool checkProgram(const std::string&);
 #endif
