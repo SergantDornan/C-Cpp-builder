@@ -6,8 +6,9 @@
 #include <cstring>
 #include <sstream>
 
-extern std::vector<std::string> split(std::string s, std::string ch = " ", std::string except = "");
-extern std::string strip(std::string s, std::string ch = " ");
+extern std::vector<std::string> split(const std::string& s,const std::string& ch = " ",
+const std::string& except = "");
+extern std::string strip(const std::string& s,const std::string& ch = " ");
 
 template <class T>
 int find(const std::vector<T>& v,const T& s){
@@ -19,10 +20,6 @@ int find(const std::vector<T>& v,const T& s){
 }
 
 int find (const std::vector<std::string>& v, const char* s);
-
-int find(const std::string& s,const char s0);
-
-int find(const std::string& s,const std::string& s0);
 
 template <class T>
 int binarySearch(std::vector<T>& v,const T x, int leftoffset = 0, int rightoffset = 0) 

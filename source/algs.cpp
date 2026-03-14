@@ -1,6 +1,8 @@
 #include <algs.h>
 
-extern std::vector<std::string> split(std::string s, std::string ch, std::string except){
+extern std::vector<std::string> split(const std::string& s,const std::string& ch,
+const std::string& except)
+{
     std::vector<std::string> res;
     std::string curr;
     bool push = true;
@@ -18,7 +20,6 @@ extern std::vector<std::string> split(std::string s, std::string ch, std::string
             curr += s[i];
         }
         else if(i == (s.size() - 1)){
-        //  std::cout << "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" << std::endl;
             if(ch.find(s[i]) == std::string::npos)
                 curr+=s[i];
             res.push_back(curr);
@@ -31,7 +32,7 @@ extern std::vector<std::string> split(std::string s, std::string ch, std::string
     return res;
 }
 
-extern std::string strip(std::string s, std::string ch){
+extern std::string strip(const std::string& s,const std::string& ch){
     std::string res;
     for(int i = 0; i < s.size(); ++i){
         if(ch.find(s[i]) == std::string::npos)
@@ -40,20 +41,9 @@ extern std::string strip(std::string s, std::string ch){
     return res;
 }
 
-
 int find(const std::string& s,const char s0){
     for(int i = 0; i < s.size(); ++i){
         if(s[i] == s0)
-            return i;
-    }
-    return -1;
-}
-int find(const std::string& s,const std::string& s0){
-    if(s.size() < s0.size())
-        return -1;
-    for(int i = 0; i < s.size() - s0.size() + 1; ++i){
-        std::string tmp(s.begin() + i, s.begin() + i + s0.size());
-        if(tmp == s0)
             return i;
     }
     return -1;
