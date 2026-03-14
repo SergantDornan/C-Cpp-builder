@@ -2,6 +2,7 @@
 #define FLAGSH
 
 #include "filework.h"
+#include "BuilderFilework.h"
 const std::vector<std::string> possibleFlags = {"--rebuild", "-reb", 
 	"-o", "--no-link-force", "--link-force", "--default-link",
 	"--no-link-lib", "--CC", "--CXX", "--compile-flags", "--link-flags", "--clear-flags",

@@ -20,6 +20,6 @@ void getIncludes(std::vector<std::string>&,
     const std::vector<FileNode>&,
     const std::vector<int>&,
     const std::string& ,bool all = false);
-std::string converPathToName(const std::string&, const char ch = '_');
+std::string convertPathToName(const std::string&, const char ch = '_');
 
 #endif

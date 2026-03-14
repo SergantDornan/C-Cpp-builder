@@ -86,7 +86,7 @@ inline BelderResult runCommandInDir(const std::string& cmd,
     pid_t pid = fork();
     if (pid < 0) {
         result.exitCode  = -1;
-        result.stderr_st r= std::string("fork() failed: ") + strerror(errno);
+        result.stderr_str = std::string("fork() failed: ") + strerror(errno);
         close(stdout_pipe[0]); close(stdout_pipe[1]);
         close(stderr_pipe[0]); close(stderr_pipe[1]);
         return result;

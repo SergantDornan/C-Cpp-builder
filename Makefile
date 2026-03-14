@@ -41,17 +41,13 @@ $(OUTPUT):$(OBJECTS)
 	$(CPPC) $^ -o $@
 
 $(BELDERBINARY): $(OBJECTS)
-	$(CPPC) $^ -o $@ #-lpthread
+	$(CPPC) $^ -o $@
 
 $(deps)/t_%.o: $(TESTSDIR)/%.cpp
 	$(CPPC) $(C++standart) -g3 -w $(GTEST_CFLAGS) -I$(TESTSDIR) -DBELDER_BINARY='"$(abspath $(BELDERBINARY))"' -c $< -o $@
 
 $(TESTBIN): $(TESTOBJECTS)
-	#@if [ -z "$(GTEST_LIBS)" ] && ! $(CPPC) -lgtest /dev/null -o /dev/null 2>/dev/null; then \
-	#    echo "ERROR: GoogleTest not found. Install with: sudo apt-get install libgtest-dev"; \
-	#    exit 1; \
-	#fi
-	$(CPPC) $^ -o $@ $(GTEST_LIBS) #-lpthread -lstdc++fs
+	$(CPPC) $^ -o $@ $(GTEST_LIBS)
 
 TEST_ARGS ?=
 

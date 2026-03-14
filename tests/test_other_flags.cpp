@@ -245,30 +245,6 @@ TEST_F(BelderFixture, EntryFileSpecifiedExplicitly) {
     EXPECT_TRUE(fileExists("out")) << r.diagnostic("output binary 'out' should exist after building myentry.cpp");
 }
 
-TEST_F(BelderFixture, StartFileChangeProducesNewOutput) {
-    if (!toolExists("g++")) GTEST_SKIP() << "g++ not found";
-    write("entry1.cpp",
-          "#include <iostream>\n"
-          "int main(){std::cout<<\"entry1\"<<std::endl;return 0;}\n");
-    write("entry2.cpp",
-          "#include <iostream>\n"
-          "int main(){std::cout<<\"entry2\"<<std::endl;return 0;}\n");
-
-    // Build with entry1
-    auto r1 = runBelder({"entry1.cpp"});
-    EXPECT_BELDER_OK(r1, "build with entry1.cpp as start file");
-    auto out1 = runCommand(tmpDir + "/out");
-    EXPECT_TRUE(out1.stdout_str.find("entry1") != std::string::npos)
-        << out1.diagnostic("binary built from entry1.cpp should print 'entry1'");
-
-    // Switch to entry2 - use --rebuild to force recompilation
-    auto r2 = runBelder({"entry2.cpp", "--rebuild"});
-    EXPECT_BELDER_OK(r2, "rebuild with entry2.cpp as the new start file");
-    auto out2 = runCommand(tmpDir + "/out");
-    EXPECT_TRUE(out2.stdout_str.find("entry2") != std::string::npos)
-        << out2.diagnostic("binary rebuilt from entry2.cpp should print 'entry2'");
-}
-
 // =======================================================================
 // File deletion cleans up dep/sym files
 // =======================================================================

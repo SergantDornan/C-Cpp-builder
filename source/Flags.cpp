@@ -13,24 +13,29 @@ bool isFlag(const std::string& s){
 }
 
 std::vector<std::string> getParameters(std::vector<std::string>& args,
-	const std::string& path, const std::string& cd,
+	const std::string& wd, const std::string& cd,
 	const std::string& prInName)
 {
 
 	std::vector<std::string> parameters;
-	std::ifstream in(path);
+	std::ifstream in((wd + "/" + configFile));
 	std::string line;
 	while(std::getline(in, line)) parameters.push_back(line);
 	in.close();
+
 	bool clearFlags = (find(args, "--clear-flags") != -1 || find(args, "--clean-flags") != -1 ||
 		find(args, "--flags-clear") != -1 || find(args, "--flags-clean") != -1);
 	bool clearOptions = (find(args, "--clean-options") != -1 || find(args, "--clear-options") != -1);
 	bool isFoundEntry = (findEntryFile(args,cd, parameters) == 0);
+
 	if(prInName != parameters[0] && prInName != "-1" && isFoundEntry){
 		std::cout << std::endl;
-		std::cout << "------- Change of entry file, clearing all previous options -------" << std::endl;
+		std::cout << "------- Change of entry file, clearing all old flags and options -------" << std::endl;
+		std::cout << std::endl;
 		clearOptions = true;
+		clearFlags = true;
 	}
+
 	if(clearFlags || clearOptions)
 	{
 		for(int i = 7; i <= 12; ++i)
@@ -107,6 +112,7 @@ std::vector<std::string> getParameters(std::vector<std::string>& args,
 	getNameAfterFlag(args, "-o", parameters[1]);
 	if(getFolder(parameters[1]) == "")
 		parameters[1] = (cd + "/" + parameters[1]);
+
 	return parameters;
 }
 bool isStandart(const std::string& s){
@@ -197,6 +203,8 @@ void getAddDirs(std::vector<std::string>& args,const std::string& cd, std::vecto
 	}
 	else parameters[14] = "-1";
 }
+
+
 int findEntryFile(const std::vector<std::string>& args,
 	const std::string& cd, std::vector<std::string>& parameters){
 

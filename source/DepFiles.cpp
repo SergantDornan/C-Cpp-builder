@@ -110,9 +110,9 @@ void UpdateDependencies(const std::vector<std::string>& HDdirs,
                 if(find(addChangedFiles, changes[j].first) == -1) addChangedFiles.push_back(changes[j].first);
                 std::string pathToDepfile;
                 if(getExt(changedFiles[i]) == "h" || getExt(changedFiles[i]) == "hpp")
-                    pathToDepfile = id + "/" + subFolders[0] + "/" + converPathToName(changedFiles[i]);
+                    pathToDepfile = id + "/" + subFolders[0] + "/" + convertPathToName(changedFiles[i]);
                 else
-                    pathToDepfile = bd + "/" + subFolders[0] + "/" + converPathToName(changedFiles[i]);
+                    pathToDepfile = bd + "/" + subFolders[0] + "/" + convertPathToName(changedFiles[i]);
                 if(changes[j].second) data[changes[j].first][1].push_back(pathToDepfile);
                 else data[changes[j].first][1].erase(
                     std::find(data[changes[j].first][1].begin(),
@@ -125,9 +125,9 @@ void UpdateDependencies(const std::vector<std::string>& HDdirs,
     for(int i = 0; i < changedFiles.size(); ++i){
         std::string pathToDepfile;
         if(getExt(changedFiles[i]) == "h" || getExt(changedFiles[i]) == "hpp")
-            pathToDepfile = id + "/" + subFolders[0] + "/" + converPathToName(changedFiles[i]);
+            pathToDepfile = id + "/" + subFolders[0] + "/" + convertPathToName(changedFiles[i]);
         else
-            pathToDepfile = bd + "/" + subFolders[0] + "/" + converPathToName(changedFiles[i]);
+            pathToDepfile = bd + "/" + subFolders[0] + "/" + convertPathToName(changedFiles[i]);
         std::string time;
         std::ifstream file(pathToDepfile);
         std::getline(file, time);
@@ -198,7 +198,7 @@ bool createDepfiles(const std::string& wd,
 
 	// Проход по хедерам и сурс файлам
 	for(int i = 0; i < allHeaders.size(); ++i){
-		std::string file = wd + "/" + reqFolders[0] + "/" + subFolders[0] + "/" + converPathToName(allHeaders[i]);
+		std::string file = wd + "/" + reqFolders[0] + "/" + subFolders[0] + "/" + convertPathToName(allHeaders[i]);
 		if(!exists(file)){
 			changeSet = true;
 			cmd = "touch " + file;
@@ -214,7 +214,7 @@ bool createDepfiles(const std::string& wd,
 	}
 
 	for(int i = 0; i < allSource.size(); ++i){
-		std::string file = bd + "/" + subFolders[0] + "/" + converPathToName(allSource[i]);
+		std::string file = bd + "/" + subFolders[0] + "/" + convertPathToName(allSource[i]);
 		if(!exists(file)){
 			changeSet = true;
 			cmd = "touch " + file;

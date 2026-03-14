@@ -38,6 +38,7 @@ The belder does not work if your assembly files contain not C-style comments
 belder file.cpp  # starting file - file.cpp
 belder #builder will look for main.cpp or main.c
 ```
+
 the builder remembers the latest settings and the entered flags, so if you just enter a command without flags or arguments, the build will go the same way as the last time
 
 if you write a "config" right after the "belder" and add flags, then you will simply update the settings without building. Next time, without arguments, the build will go through with these settings.

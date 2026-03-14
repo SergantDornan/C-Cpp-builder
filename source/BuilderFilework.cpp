@@ -7,7 +7,7 @@ const std::string configFile = "config";
 const std::vector<std::string> reqFolders = {"headers","source","sym"}; // Если меньше двух имен - будет SegFault
 const std::vector<std::string> subFolders = {"deps", "objects"}; // Если меньше трех имен - будет SegFault
 
-std::string converPathToName(const std::string& path, const char ch){
+std::string convertPathToName(const std::string& path, const char ch){
     std::string result = path;
     if(result[0] == '/') result.erase(result.begin());
     for(int i = 0; i < result.size(); ++i){

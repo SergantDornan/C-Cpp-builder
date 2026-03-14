@@ -43,11 +43,11 @@ std::vector<std::string> toLinkList(const std::vector<std::string>& parameters,
 	std::vector<std::string> toLink;
 	std::vector<binFile> filesInfo;
 	binFile mainObj = {"main"};
-	toLink.push_back(objFolder + "/" + converPathToName(parameters[0]) + ".o");
+	toLink.push_back(objFolder + "/" + convertPathToName(parameters[0]) + ".o");
 	std::vector<std::string> forceLinkLibs, fLink;
 	if(parameters[2] != "-1") forceLinkLibs = split(parameters[2]);
 	if(parameters[3] != "-1") fLink = split(parameters[3]);
-    OneThreadObjAnal(wd,(objFolder + "/" + converPathToName(parameters[0]) + ".o"),
+    OneThreadObjAnal(wd,(objFolder + "/" + convertPathToName(parameters[0]) + ".o"),
     	mainObj,allObj,allLibs,filesInfo);
     unsigned long x = 0;
     std::map<std::string, std::string> syms;
@@ -57,7 +57,7 @@ std::vector<std::string> toLinkList(const std::vector<std::string>& parameters,
 	for(int i = 0; i < fLink.size(); ++i){
 		int index = -1;
 		for(int j = 0; j < filesInfo.size(); ++j){
-			if(filesInfo[j].name == (objFolder + "/" + converPathToName(fLink[i]) + ".o")){
+			if(filesInfo[j].name == (objFolder + "/" + convertPathToName(fLink[i]) + ".o")){
 				index = j;
 				break;
 			}
@@ -147,7 +147,7 @@ void OneThreadObjAnal(const std::string& wd, const std::string& name,binFile& ma
 	}
 	// ------------- LIB ANAL -------------
 	for(int i = 0; i < allLibs.size(); ++i){
-		std::string symFile = (wd + "/" + reqFolders[2] + "/" + converPathToName(allLibs[i]) + ".sym");
+		std::string symFile = (wd + "/" + reqFolders[2] + "/" + convertPathToName(allLibs[i]) + ".sym");
 		binFile newfile = {allLibs[i]};
 		if(exists(symFile)) readSymfile(newfile, symFile);
 		else{
@@ -248,7 +248,7 @@ std::string link(const std::string& wd,
 	while(it != toLink.end()){
 		bool erase = false;
 		for(int i = 0; i < includes.size(); ++i){
-			if((*it) == (objFolder + "/" + converPathToName(includes[i]) + ".o") && 
+			if((*it) == (objFolder + "/" + convertPathToName(includes[i]) + ".o") && 
 				getExt(includes[i]) != "h" && getExt(includes[i]) != "hpp")
 			{
 				toLink.erase(it);

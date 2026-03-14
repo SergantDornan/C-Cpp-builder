@@ -170,17 +170,17 @@ int main(int argc, char* argv[]){
 		}
 	}
 	std::string wd = createEssentials(rebuild);
-	std::string projectConfig = wd + "/" + configFile;
+	//std::string projectConfig = wd + "/" + configFile;
 	std::string prInName, prOutName;
-	std::ifstream f(projectConfig);
+	std::ifstream f(wd + "/" + configFile);
 	std::getline(f, prInName);
 	std::getline(f, prOutName);
 	f.close();
-	std::vector<std::string> parameters = getParameters(args, projectConfig, cd, prInName);
+	std::vector<std::string> parameters = getParameters(args, wd, cd, prInName);
 	rebuildForSharedLib(prOutName, parameters[1], wd);
-	if(prOutName != parameters[1]) relink = true;
+	if(prOutName != parameters[1] || prInName != parameters[0]) relink = true;
 
-	std::ofstream out(projectConfig);
+	std::ofstream out(wd + "/" + configFile);
 	for(int i = 0; i < parameters.size(); ++i) out << parameters[i] << std::endl;
 	out.close();
 

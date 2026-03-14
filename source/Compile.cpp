@@ -59,7 +59,7 @@ void compileFile(const std::string& path,
     }
     std::string compiler;
     int code = -1;
-    std::string objFile = bd + "/" + subFolders[1] + "/" + converPathToName(depfile[0]) + ".o";
+    std::string objFile = bd + "/" + subFolders[1] + "/" + convertPathToName(depfile[0]) + ".o";
     std::string include = "";
     std::vector<std::string> incDirs;
     if(depfile[4] != "-1") incDirs = split(depfile[4]);
