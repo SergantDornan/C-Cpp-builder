@@ -244,7 +244,9 @@ int main(int argc, char* argv[]){
 		std::cout << "============================ SUCCESS ============================" << std::endl;
     else if(linkmsg == "nothing to link" && exists(parameters[1]))
     	std::cout << "belder: nothing to link" << std::endl;
-    if(run && exists(parameters[1])){
+    else if(linkmsg == "compilation error")
+    	std::cout << "belder: compilation error" << std::endl;
+    if(run && exists(parameters[1]) && linkmsg != "compilation error"){
 		if(linkType == 0){
 			std::string cmd = parameters[1];
 			system(cmd.c_str());
@@ -256,5 +258,6 @@ int main(int argc, char* argv[]){
 		}
 	}
 	if(linkmsg == "nothing to link") return 10;
+	else if(linkmsg == "compilation error") return 2;
     else return 0;
 }

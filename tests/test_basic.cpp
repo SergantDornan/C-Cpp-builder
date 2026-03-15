@@ -298,6 +298,9 @@ TEST_F(BelderFixture, CompilationFailureStopsLinking) {
     // The g++ error should appear in the output
     EXPECT_TRUE(r.hasOutput("error") || r.hasOutput("Error"))
         << r.diagnostic("Compilation error output should contain 'error' when bad.cpp has syntax errors");
+    EXPECT_TRUE(!r.hasOutput("SUCCESS")) << r.diagnostic("Compilation error shoud not contain SUCCESS");
+    EXPECT_TRUE(r.hasOutput("belder: compilation error")) << r.diagnostic("Compilation error shoud contain message \"compilation error\"");
+    EXPECT_EQ(r.exitCode, 2) << r.diagnostic("Should exit with code 2 - compilation error");    
 }
 
 // -----------------------------------------------------------------------

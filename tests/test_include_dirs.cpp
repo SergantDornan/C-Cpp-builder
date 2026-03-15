@@ -1,6 +1,6 @@
 // tests/test_include_dirs.cpp
-// Tests for -I, --no-include, --defult-include options
-// Note: '--defult-include' is the actual flag name in belder (intentional typo)
+// Tests for -I, --no-include, --default-include options
+// Note: '--default-include' is the actual flag name in belder (intentional typo)
 
 #include "helpers.h"
 
@@ -173,88 +173,96 @@ TEST_F(BelderFixture, NoIncludeMultipleDirs) {
 }
 
 // =======================================================================
-// --defult-include tests (note: intentional typo in belder's option name)
+// --default-include tests (note: intentional typo in belder's option name)
 // =======================================================================
 
-TEST_F(BelderFixture, DefultIncludeAbsoluteDir) {
+TEST_F(BelderFixture, defaultIncludeAbsoluteDir) {
     if (!toolExists("g++")) GTEST_SKIP() << "g++ not found";
     write("extradir/file.h", "int f();\n");
     write("main.cpp", simpleCppMain());
 
     std::string dir = tmpDir + "/extradir";
     // First add to no-include
-    runBelder({"--no-include", dir, "config"});
-    // Then restore it with --defult-include
-    auto r = runBelder({"--defult-include", dir});
-    EXPECT_EQ(r.exitCode, 0) << "--defult-include abs dir should work: " << r.combined();
+    runBelder({"config", "--no-include", dir});
+    // Then restore it with --default-include
+    auto r = runBelder({"--default-include", dir});
+    auto r2 = runBelder({"status"});
+    EXPECT_TRUE(!r2.hasOutput(dir)) << "no " << dir << " shoud be in output" << std::endl;
+    EXPECT_EQ(r.exitCode, 0) << "--default-include abs dir should work: " << r.combined();
 }
 
-TEST_F(BelderFixture, DefultIncludeRelativeDir) {
+TEST_F(BelderFixture, defaultIncludeRelativeDir) {
     if (!toolExists("g++")) GTEST_SKIP() << "g++ not found";
     write("myextradir/file.h", "int f();\n");
     write("main.cpp", simpleCppMain());
 
     // First add to no-include
-    runBelder({"--no-include", tmpDir + "/myextradir", "config"});
+    runBelder({"config","--no-include", tmpDir + "/myextradir"});
     // Then restore with relative path
-    auto r = runBelder({"--defult-include", "myextradir"});
-    EXPECT_EQ(r.exitCode, 0) << "--defult-include relative dir should work: " << r.combined();
+    auto r = runBelder({"--default-include", "myextradir"});
+    auto r2 = runBelder({"status"});
+    EXPECT_TRUE(!r2.hasOutput("myextradir")) << "no myextradir shoud be in output" << std::endl; 
+    EXPECT_EQ(r.exitCode, 0) << "--default-include relative dir should work: " << r.combined();
 }
 
-TEST_F(BelderFixture, DefultIncludeRelativeNonExistentDir) {
+TEST_F(BelderFixture, defaultIncludeRelativeNonExistentDir) {
     if (!toolExists("g++")) GTEST_SKIP() << "g++ not found";
     write("main.cpp", simpleCppMain());
 
     // First build to initialize the project state
     runBelder({"--rebuild"});
 
-    // --defult-include with non-existent relative dir is silently handled
-    auto r = runBelder({"--defult-include", "nonexistent_dir_xyz"});
+    // --default-include with non-existent relative dir is silently handled
+    auto r = runBelder({"--default-include", "nonexistent_dir_xyz"});
     EXPECT_TRUE(r.exitCode == 10 || r.exitCode == 0 || r.hasOutput("not exist"))
         << "Should handle non-existent dir gracefully: " << r.combined();
 }
 
-TEST_F(BelderFixture, DefultIncludeAbsoluteNonExistentDir) {
+TEST_F(BelderFixture, defaultIncludeAbsoluteNonExistentDir) {
     if (!toolExists("g++")) GTEST_SKIP() << "g++ not found";
     write("main.cpp", simpleCppMain());
 
     // First build to initialize the project state
     runBelder({"--rebuild"});
 
-    // --defult-include with non-existent absolute dir is silently handled
-    auto r = runBelder({"--defult-include", "/tmp/belder_nonexistent_dir_xyz"});
+    // --default-include with non-existent absolute dir is silently handled
+    auto r = runBelder({"--default-include", "/tmp/belder_nonexistent_dir_xyz"});
     EXPECT_TRUE(r.exitCode == 10 || r.exitCode == 0 || r.hasOutput("not exist"))
         << "Should handle non-existent abs dir gracefully: " << r.combined();
 }
 
-TEST_F(BelderFixture, DefultIncludeDirAlreadyInIList) {
+TEST_F(BelderFixture, defaultIncludeDirAlreadyInIList) {
     if (!toolExists("g++")) GTEST_SKIP() << "g++ not found";
     write("extdir2/file.h", "int f();\n");
     write("main.cpp", simpleCppMain());
 
     std::string dir = tmpDir + "/extdir2";
     // Add to -I list
-    auto r1 = runBelder({"-I" + dir, "config"});
+    auto r1 = runBelder({"config", "-I" + dir});
     // Try to also add to default (already in I list)
-    auto r2 = runBelder({"--defult-include", dir});
+    auto r2 = runBelder({"--default-include", dir});
     EXPECT_TRUE(r2.exitCode == 0 || r2.hasOutput("already") || r2.hasOutput("ERROR"))
         << r2.combined();
+    auto r3 = runBelder({"status"});
+    EXPECT_TRUE(!r3.hasOutput(dir)) << "status shoud not have " << dir << " output" << std::endl;
 }
 
-TEST_F(BelderFixture, DefultIncludeDirAlreadyInNoIncludeList) {
+TEST_F(BelderFixture, defaultIncludeDirAlreadyInNoIncludeList) {
     if (!toolExists("g++")) GTEST_SKIP() << "g++ not found";
     write("ndir/file.h", "int f();\n");
     write("main.cpp", simpleCppMain());
 
     std::string dir = tmpDir + "/ndir";
     // Add to no-include
-    auto r1 = runBelder({"--no-include", dir, "config"});
-    // --defult-include should remove it from no-include
-    auto r2 = runBelder({"--defult-include", dir});
-    EXPECT_EQ(r2.exitCode, 0) << "--defult-include removes from no-include: " << r2.combined();
+    auto r1 = runBelder({"config", "--no-include", dir});
+    // --default-include should remove it from no-include
+    auto r2 = runBelder({"--default-include", dir});
+    EXPECT_EQ(r2.exitCode, 0) << "--default-include removes from no-include: " << r2.combined();
+    auto r3 = runBelder({"status"});
+    EXPECT_TRUE(!r3.hasOutput(dir)) << "status shoud not have " << dir << " output" << std::endl;
 }
 
-TEST_F(BelderFixture, DefultIncludeMultipleDirs) {
+TEST_F(BelderFixture, defaultIncludeMultipleDirs) {
     if (!toolExists("g++")) GTEST_SKIP() << "g++ not found";
     write("dir_a/f.h", "int f();\n");
     write("dir_b/g.h", "int g();\n");
@@ -263,8 +271,10 @@ TEST_F(BelderFixture, DefultIncludeMultipleDirs) {
     std::string da = tmpDir + "/dir_a";
     std::string db = tmpDir + "/dir_b";
     // Add both to no-include
-    runBelder({"--no-include", da, db, "config"});
+    runBelder({"config", "--no-include", da, db});
     // Reset both
-    auto r = runBelder({"--defult-include", da, db});
-    EXPECT_EQ(r.exitCode, 0) << "--defult-include multiple dirs: " << r.combined();
+    auto r = runBelder({"--default-include", da, db});
+    EXPECT_EQ(r.exitCode, 0) << "--default-include multiple dirs: " << r.combined();
+    auto r2 = runBelder({"status"});
+    EXPECT_TRUE(!r2.hasOutput(da) && !r2.hasOutput(db)) << "status shoud not have " << da << " " << db << " output" << std::endl;
 }

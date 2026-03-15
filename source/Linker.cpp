@@ -211,6 +211,8 @@ std::string link(const std::string& wd,
 	const bool log, const int linkType, const bool relink,
 	const bool idgaf, const std::vector<std::string>& allLibs)
 {
+	if(toCompile.size() != 0 && toCompile[0] == "-1")
+		return "compilation error";
 	if(toCompile.size() == 0 && exists(parameters[1]) && !relink)
 		return "nothing to link";
 	std::vector<std::string> toLink = toLinkList(parameters,wd,idgaf, allLibs);

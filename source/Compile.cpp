@@ -31,19 +31,31 @@ std::vector<std::string> compile(const std::string& wd,const std::vector<std::st
     for(int i = 0; i < numThreads && i*m < toCompile.size(); ++i)
         multiCompile.push_back(std::vector<std::string>(toCompile.begin() + i*m,
          toCompile.begin() + (((i+1)*m < toCompile.size()) ? (i+1)*m : toCompile.size())));
+    
+    std::vector<int> results(multiCompile.size()); 
+    
     for (int i = 0; i < multiCompile.size(); ++i)
         threads.push_back(std::thread(oneThreadCompile, 
             std::ref(multiCompile[i]),
-            std::ref(bd),log,std::ref(parameters), linkType));
+            std::ref(bd),log, std::ref(parameters) , linkType, std::ref(results[i])));
+    
     for (auto& thread : threads) {
         if (thread.joinable())
             thread.join(); 
+    }
+
+    for(int i = 0; i < results.size(); ++i){
+        if(results[i] != 0) {
+            toCompile.clear();
+            toCompile.push_back("-1");
+            break;
+        }
     }
     return toCompile;
 }
 
 
-void compileFile(const std::string& path, 
+int compileFile(const std::string& path, 
     const std::string& bd, const bool log,
     const std::vector<std::string>& parameters, const int linkType){
 
@@ -105,11 +117,16 @@ void compileFile(const std::string& path,
     out << depfile[3] << std::endl;
     out << depfile[4] << std::endl;
     out.close();
+    return code;
 }
 void oneThreadCompile(const std::vector<std::string>& toCompile,
     const std::string& bd,const bool log,
-    const std::vector<std::string>& parameters, const int linkType){
+    const std::vector<std::string>& parameters, const int linkType, int& code){
 
+    bool success = false;
     for(int i = 0; i < toCompile.size(); ++i) 
-        compileFile(toCompile[i],bd,log,parameters,linkType);
+        success |= (compileFile(toCompile[i],bd,log,parameters,linkType) != 0);
+    if(!success) code = 0;
+    else code = 1; 
+
 }
