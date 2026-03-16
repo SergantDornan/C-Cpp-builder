@@ -106,5 +106,3 @@ void swapBytesSymHeader(Elf32_Sym* h){
 	h -> st_value = swapBytes(h -> st_value);
 	h -> st_size = swapBytes(h -> st_size);
 }
-
-

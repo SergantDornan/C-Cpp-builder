@@ -13,12 +13,12 @@ bool isFlag(const std::string& s){
 }
 
 std::vector<std::string> getParameters(std::vector<std::string>& args,
-	const std::string& wd, const std::string& cd,
+	const std::string& projectConfig, const std::string& cd,
 	const std::string& prInName)
 {
 
 	std::vector<std::string> parameters;
-	std::ifstream in((wd + "/" + configFile));
+	std::ifstream in(projectConfig);
 	std::string line;
 	while(std::getline(in, line)) parameters.push_back(line);
 	in.close();
