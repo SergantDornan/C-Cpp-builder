@@ -358,3 +358,73 @@ TEST_F(BelderFixture, StartFileChangeProducesNewOutput) {
     EXPECT_TRUE(out2.stdout_str.find("entry2") != std::string::npos)
         << out2.diagnostic("binary rebuilt from entry2.cpp should print 'entry2'");
 }
+
+TEST_F(BelderFixture, ComplexTestStaticLib) {
+    if (!toolExists("g++")) GTEST_SKIP() << "g++ not found";
+
+    write("lib.h",
+        "template <class T>\n"
+        "T func(T a){\n"
+        "return ++a;\n"
+        "}\n"
+        );
+
+    write("lib.cpp",
+        "#include \"lib.h\"\n"
+        "#include <iostream>\n"
+        "void aboba(){\n"
+        "std::cout << \"_lib.cpp_\" << std::endl;\n"
+        "std::cout << func(4) << std::endl;\n"
+        "}\n"
+        );
+
+    write("main1.cpp",
+        "#include <iostream>\n"
+        "void aboba();\n"
+        "int main(){\n"
+        "std::cout << \"_main1.cpp_\" << std::endl;\n"
+        "aboba();\n"
+        "}\n"
+        );
+
+
+    auto r1 = runBelder({"lib.cpp", "-o", "libLib1.a"});
+    EXPECT_BELDER_OK(r1, "first lib should be built");
+    auto r2 = runBelder({"main1.cpp", "-o", "out", "-log", "--no-link-force", "lib.cpp", "run"});
+    EXPECT_TRUE(r2.hasOutput("_main1.cpp_") && r2.hasOutput("_lib.cpp_") && r2.hasOutput("5"));
+}
+
+TEST_F(BelderFixture, ComplexTestSharedLib) {
+    if (!toolExists("g++")) GTEST_SKIP() << "g++ not found";
+
+    write("lib.h",
+        "template <class T>\n"
+        "T func(T a){\n"
+        "return ++a;\n"
+        "}\n"
+        );
+
+    write("lib.cpp",
+        "#include \"lib.h\"\n"
+        "#include <iostream>\n"
+        "void aboba(){\n"
+        "std::cout << \"_lib.cpp_\" << std::endl;\n"
+        "std::cout << func(4) << std::endl;\n"
+        "}\n"
+        );
+
+    write("main1.cpp",
+        "#include <iostream>\n"
+        "void aboba();\n"
+        "int main(){\n"
+        "std::cout << \"_main1.cpp_\" << std::endl;\n"
+        "aboba();\n"
+        "}\n"
+        );
+
+
+    auto r1 = runBelder({"lib.cpp", "-o", "libLib1.so"});
+    EXPECT_BELDER_OK(r1, "first lib should be built");
+    auto r2 = runBelder({"main1.cpp", "-o", "out", "-log", "--no-link-force", "lib.cpp", "run"});
+    EXPECT_TRUE(r2.hasOutput("_main1.cpp_") && r2.hasOutput("_lib.cpp_") && r2.hasOutput("5"));
+}

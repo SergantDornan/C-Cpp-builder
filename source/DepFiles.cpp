@@ -165,10 +165,10 @@ bool createDepfiles(const std::string& wd,
 {
 	bool changeSet = false;
 	std::string bd = wd + "/" + reqFolders[1];
-	auto dirs = getDirs(bd + "/" + subFolders[0]);
+	auto dirs = getDirs(bd + "/" + subFolders[0] + "/");
 	//Проход по dep файлам:
 
-    // Удаление лишних деп файлов и объектников у сурс файлов
+    // Удаление лишних деп файлов и объектников и sym у сурс файлов
     std::string cmd = "rm";
 	for(int i = 1; i < dirs.size(); ++i){
 		std::ifstream file(dirs[i]);
@@ -178,12 +178,13 @@ bool createDepfiles(const std::string& wd,
         if(find(allSource, line) == -1){
 			changeSet = true;
 			std::string objFile = wd + "/" + reqFolders[1] + "/" + subFolders[1] + "/" + getName(dirs[i]) + ".o";
-			cmd += (" " + dirs[i] + " " + objFile);
+			std::string symFile = wd + "/" + reqFolders[2] + "/" + getName(dirs[i]) + ".sym";
+            cmd += (" " + dirs[i] + " " + objFile + " " + symFile);
 		}
 	}
 
     // Удаление лишних деп файлов у хедеров
-	dirs = getDirs(wd + "/" + reqFolders[0] + "/" + subFolders[0]);
+	dirs = getDirs(wd + "/" + reqFolders[0] + "/" + subFolders[0] + "/");
 	for(int i = 1; i < dirs.size(); ++i){
 		std::ifstream file(dirs[i]);
 		std::string line;
@@ -249,6 +250,12 @@ void rebuildForSharedLib(const std::string& n1, const std::string& n2,
         std::string dir = wd + "/" + reqFolders[1] + "/" + subFolders[0];
         std::string cmd = "rm -rf";
         auto dirs = getDirs(dir);
+        for(int i = 1; i < dirs.size(); ++i)
+            cmd += (" " + dirs[i]);
+        dirs = getDirs(wd + "/" + reqFolders[2]);
+        for(int i = 1; i < dirs.size(); ++i)
+            cmd += (" " + dirs[i]);
+        dirs = getDirs(wd + "/" + reqFolders[1] + "/" + subFolders[1]);
         for(int i = 1; i < dirs.size(); ++i)
             cmd += (" " + dirs[i]);
         system(cmd.c_str());
