@@ -376,7 +376,7 @@ void FindForceLinkUnlink(std::vector<std::string>& args,const std::string& cd,
 					return;
 				}
 				if(!erase) newv[i] = result[0];
-				else newv[i] = "-1";
+				else newv[i] = "remove lib";
 			}
 			else{
 				findFile(result, ("lib" + newv[i] + ".so"), cd, AddInc, fUnInc);
@@ -407,7 +407,10 @@ void FindForceLinkUnlink(std::vector<std::string>& args,const std::string& cd,
 	}
 	it = newv.begin();
 	while(it != newv.end()){
-		if(*it == "-1") newv.erase(it);
+		if(*it == "remove lib") {
+			newv.erase(it);
+			newfLinkSize--;
+		}
 		else it++;
 	}
 	for(int i = 0; i < newv.size(); ++i){
@@ -421,7 +424,7 @@ void FindForceLinkUnlink(std::vector<std::string>& args,const std::string& cd,
 					fLink.push_back(newv[i]);
 			}
 		}
-		else if(i < newfLinkSize + newfUnlinkSize){
+		else if(i < (newfLinkSize + newfUnlinkSize)){
 			if(isLib(newv[i])){
 				if(newv[i].find("*") != std::string::npos){
 					auto spl = split(newv[i], "*");
