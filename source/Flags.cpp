@@ -49,6 +49,7 @@ std::vector<std::string> getParameters(std::vector<std::string>& args,
 		parameters[6] = "-1";
 		parameters[13] = "-1";
 		parameters[14] = "-1";
+		parameters[5] = "default default";
 	}
 	auto it = args.begin();
 	while(it != args.end()){
