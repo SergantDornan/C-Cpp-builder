@@ -28,13 +28,13 @@ std::vector<std::string> getParameters(std::vector<std::string>& args,
 	bool clearOptions = (find(args, "--clean-options") != -1 || find(args, "--clear-options") != -1);
 	bool isFoundEntry = (findEntryFile(args,cd, parameters) == 0);
 
-	if(prInName != parameters[0] && prInName != "-1" && isFoundEntry){
-		std::cout << std::endl;
-		std::cout << "------- Change of entry file, clearing all old flags and options -------" << std::endl;
-		std::cout << std::endl;
-		clearOptions = true;
-		clearFlags = true;
-	}
+	// if(prInName != parameters[0] && prInName != "-1" && isFoundEntry){
+	// 	std::cout << std::endl;
+	// 	std::cout << "------- Change of entry file, clearing all old flags and options -------" << std::endl;
+	// 	std::cout << std::endl;
+	// 	clearOptions = true;
+	// 	clearFlags = true;
+	// }
 
 	if(clearFlags || clearOptions)
 	{

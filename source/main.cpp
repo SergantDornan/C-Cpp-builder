@@ -257,7 +257,7 @@ int main(int argc, char* argv[]){
 			std::cerr << std::endl;
 		}
 	}
-	if(linkmsg == "nothing to link") return 10;
+	if(linkmsg == "nothing to link") return 0;
 	else if(linkmsg == "compilation error") return 2;
     else return 0;
 }
