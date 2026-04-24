@@ -58,8 +58,8 @@ TEST_F(BelderFixture, CppStandardSwitch) {
     write("main.cpp", simpleCppMain());
 
     // Build with C++17 standard
-    auto r = runBelder({"--C++standart", "-std=c++14"});
-    EXPECT_BELDER_OK(r, "--C++standart c++17: belder should accept and use the c++17 standard flag");
+    auto r = runBelder({"-std=c++14"});
+    EXPECT_BELDER_OK(r, "--C++standart c++14: belder should accept and use the c++17 standard flag");
     auto r2 = runBelder({"status"});
     EXPECT_TRUE(r2.hasOutput("C++ Standart:") && r2.hasOutput("-std=c++14")) << "C++ Standart should be -std=c++14" << std::endl;
 }
@@ -68,8 +68,8 @@ TEST_F(BelderFixture, CppStandardSwitchShownInLog) {
     if (!toolExists("g++")) GTEST_SKIP() << "g++ not found";
     write("main.cpp", simpleCppMain());
 
-    auto r = runBelder({"--rebuild", "--C++standart", "-std=c++14", "-log"});
-    EXPECT_BELDER_OK(r, "--C++standart c++17 with -log: build should succeed");
+    auto r = runBelder({"--rebuild", "-std=c++14", "-log"});
+    EXPECT_BELDER_OK(r, "--C++standart c++14 with -log: build should succeed");
     EXPECT_TRUE(r.hasOutput("std=c++14"))
         << r.diagnostic("-log output should show 'c++14' or 'std=c++14' in compiler invocation");
 }
@@ -78,7 +78,7 @@ TEST_F(BelderFixture, CStandardSwitch) {
     if (!toolExists("gcc")) GTEST_SKIP() << "gcc not found";
     write("main.c", simpleCMain());
 
-    auto r = runBelder({"--Cstandart", "-std=c17"});
+    auto r = runBelder({"-std=c17"});
     EXPECT_BELDER_OK(r, "--Cstandart c17: belder should accept and use the c17 standard flag");
     auto r2 = runBelder({"status"});
     EXPECT_TRUE(r2.hasOutput("C Standart:") && r2.hasOutput("-std=c17")) << "C Standart should be -std=c17" << std::endl;

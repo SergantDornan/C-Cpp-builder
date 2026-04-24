@@ -9,6 +9,8 @@ extern const std::string root, configFile, outputFilesConfig;
 extern std::string cd;
 extern const bool pocket;
 
+#define OUTPUT_CONFIGS_FOLDER "outputConfigs"
+
 void getAllheaders(std::vector<std::string>&,const std::string&,const std::vector<std::string>&,
 	const std::vector<std::string>&);
 void getAllsource(std::vector<std::string>&,const std::string&,const std::vector<std::string>&,

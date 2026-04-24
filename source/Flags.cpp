@@ -73,37 +73,6 @@ std::vector<std::string> getParameters(std::vector<std::string>& args,
 		else
 			it++;
 	}
-	it = args.begin();
-	while(it != args.end()){
-		if((*it) == "--C++standart"){
-			if((it != (args.end()-1)) && isStandart(*(it + 1))){
-				parameters[7] = *(it+1);
-				args.erase(it);
-				args.erase(it);
-			}
-			else{
-				std::cerr << "==================== ERROR ====================" << std::endl;
-				std::cerr << "No standart after --C++standart" << std::endl;
-				std::cerr << std::endl;
-				break;
-			}
-		}
-		else if((*it) == "--Cstandart"){
-			if((it != (args.end()-1)) && isStandart(*(it + 1))){
-				parameters[15] = *(it+1);
-				args.erase(it);
-				args.erase(it);
-			}
-			else{
-				std::cerr << "==================== ERROR ====================" << std::endl;
-				std::cerr << "No standart after --Cstandart" << std::endl;
-				std::cerr << std::endl;
-				break;
-			}
-		}
-		else
-			it++;
-	}
 	getAddDirs(args,cd, parameters);
 	getSpecFlags(args, parameters[10], "--compile-flags");
 	getSpecFlags(args, parameters[11], "--link-flags");
@@ -150,6 +119,7 @@ bool isOpt(const std::string& s){
 void getSpecFlags(std::vector<std::string>& args, std::string& s, const std::string& switchFlag){
 	auto it = args.begin();
 	bool get = false;
+	std::string s0 = "-1";
 	while(it != args.end()){
 		if(*it == switchFlag){
 			get = true;
@@ -162,11 +132,12 @@ void getSpecFlags(std::vector<std::string>& args, std::string& s, const std::str
 			it++;
 			continue;
 		}
-		if(s == "-1") s = "";
+		if(s0 == "-1") s0 = "";
 		//if(s.find(*it) == std::string::npos)
-			s += ((*it) + " ");
+			s0 += ((*it) + " ");
 		args.erase(it);
 	}
+	s = s0;
 }
 void getRestFlags(const std::vector<std::string>& args, std::string& s){
 	for(int i = 0; i < args.size(); ++i){

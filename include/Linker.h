@@ -18,3 +18,5 @@ std::string link(const std::string&, const std::vector<std::string>&,
 	const bool, const int, const bool, const bool, const std::vector<std::string>&);
 void createSymfile(binFile&, const std::string&);
 void readSymfile(binFile&, const std::string&);
+bool updateOutputFiles(const std::vector<std::string>&,const std::string&, 
+					   const std::vector<std::string>&,const std::vector<std::string>&);

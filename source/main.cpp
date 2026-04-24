@@ -232,9 +232,6 @@ int main(int argc, char* argv[]){
 	bool changeSet = createDepfiles(wd, allHeaders, allSource, log);
 	std::vector<std::string> toCompile = compile(wd,parameters,changeSet,log,linkType,map,leaves,numThreads);
 	updateSymfiles(wd, allLibs);
-
-	relink |= checkOutputFiles(parameters[1], wd, (toCompile.size() != 0 && toCompile[0] != "-1"));
-
 	std::string linkmsg = link(wd, parameters, includes, toCompile, 
 		log, linkType, relink, idgaf, allLibs);
 	

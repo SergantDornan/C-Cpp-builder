@@ -99,7 +99,7 @@ std::vector<std::string> toLinkList(const std::vector<std::string>& parameters,
 	for(int i = 0; i < binLink.size()-1; ++i){
 		for(int j = i + 1; j < binLink.size(); ++j){
 			for(int h = 0; h < binLink[j].defSyms.size(); ++h){
-				if(find(binLink[i].defSyms, binLink[j].defSyms[h]) != -1){
+				if(find(binLink[i].defSyms, binLink[j].defSyms[h]) != -1 && !idgaf){
 					std::cerr << "=================== ERROR ===================" << std::endl;
 					std::cerr << "multiple definition of symbol: " << std::endl;
 					std::cerr << binLink[j].defSyms[h] << std::endl;
@@ -213,9 +213,10 @@ std::string link(const std::string& wd,
 {
 	if(toCompile.size() != 0 && toCompile[0] == "-1")
 		return "compilation error";
-	if(toCompile.size() == 0 && exists(parameters[1]) && !relink)
-		return "nothing to link";
-	std::vector<std::string> toLink = toLinkList(parameters,wd,idgaf, allLibs);
+	//if(toCompile.size() == 0 && exists(parameters[1]) && !relink)
+	//	return "nothing to link";
+	std::vector<std::string> toLink = toLinkList(parameters,wd,idgaf,allLibs);
+
 	std::vector<std::string> libsToLink, sharedLibDirs;
 	auto iter = toLink.begin();
 	while(iter != toLink.end()){
@@ -225,23 +226,12 @@ std::string link(const std::string& wd,
 		}
 		else iter++;
 	}
-	if(toLink.size() == 0)
-		return "nothing to link";
-	bool linking = false;
-	std::string objFolder = wd + "/" + reqFolders[1] + "/" + subFolders[1]; 
-	for(int i = 0; i < toLink.size(); ++i){
-		for(int j = 0; j < toCompile.size(); ++j){
-			if((objFolder + "/" + getName(toCompile[j]) + ".o") == toLink[i]){
-				linking = true;
-				break;
-			}
-		}
-		if(linking) break;
-	}
-	linking |= relink;
-	
+	if(toLink.size() == 0) return "nothing to link";
+
+	bool linking = updateOutputFiles(toCompile, wd, parameters, toLink) | relink; 
 	if(!linking) return "nothing to link";
 
+	std::string objFolder = wd + "/" + reqFolders[1] + "/" + subFolders[1];
 	if(exists(parameters[1])){
 		std::string cmd = "rm " + parameters[1];
 		system(cmd.c_str());
@@ -275,6 +265,7 @@ std::string link(const std::string& wd,
 		std::cout << std::endl;
 	}
 
+	int code = -1;
 	if(linkType == 0 || linkType == 2){
 		std::string compiler;
 		std::vector<std::string> compilers = split(parameters[5]);
@@ -296,13 +287,13 @@ std::string link(const std::string& wd,
 		for(int i = 0; i < libsToLink.size(); ++i) cmd += (libsToLink[i] + " ");
 		cmd += (" -o " + parameters[1]);
 		if(log) std::cout << cmd << std::endl;
-		system(cmd.c_str());
+		code = system(cmd.c_str());
 	}
 	else if(linkType == 1){ // статическая библиотека
 		std::string cmd = "ar rcs " + parameters[1] + " ";
 		for(int i = 0; i < toLink.size(); ++i) cmd += (toLink[i] + " ");
 		if(log) std::cout << cmd << std::endl;
-		system(cmd.c_str());
+		code = system(cmd.c_str());
 	}
 	else{
 		std::cerr << "===================== ERROR =====================" << std::endl;
@@ -311,6 +302,13 @@ std::string link(const std::string& wd,
 		std::cerr << std::endl;
 		return "nothing to link";
 	}
+
+	const std::string curr_config = wd + "/" + OUTPUT_CONFIGS_FOLDER + "/" + convertPathToName(parameters[0]) + "_" + convertPathToName(parameters[1]);
+	std::ofstream out(curr_config);
+	out << ((code == 0) ? "true" : "false") << std::endl;
+	for(int i = 0; i < parameters.size(); ++i)
+		out << parameters[i] << std::endl;
+	out.close();
 
 	if(sharedLibDirs.size() > 0){
 		std::string cmd = postSharedLink;
@@ -323,4 +321,97 @@ std::string link(const std::string& wd,
 		system(cmd.c_str());
 	}
 	return "success";
+}
+
+bool updateOutputFiles(const std::vector<std::string>& toCompile,
+					   const std::string& wd, 
+					   const std::vector<std::string>& curr_parameters,
+					   const std::vector<std::string>& curr_toLink){
+
+	
+	const std::string output_configs_folder = wd + "/" + OUTPUT_CONFIGS_FOLDER;
+	if(!exists(output_configs_folder)){
+		std::string cmd = "mkdir " + output_configs_folder;
+		system(cmd.c_str());
+	}
+	auto configs = getDirs(output_configs_folder);
+
+	// ----- обработка текущего файла
+	std::string is_updated;
+	const std::string curr_config = output_configs_folder + "/" + convertPathToName(curr_parameters[0]) + "_" + convertPathToName(curr_parameters[1]);
+	int index = -1;
+	for(int i = 1; i < configs.size(); ++i){
+		if(configs[i] == curr_config){
+			index = i;
+			break;
+		}
+	}
+	if(index == -1){
+		is_updated = "false";
+		std::string cmd = "touch " + curr_config;
+		system(cmd.c_str());
+	}
+	else{
+		std::ifstream in(curr_config);
+		std::getline(in, is_updated);
+		in.close();
+	}
+	std::cout << "is_updated in file: " << is_updated << std::endl;
+	std::cout << "To compile: ";
+	for(int i = 0; i < toCompile.size(); ++i)
+		std::cout << toCompile[i] << " ";
+	std::cout << std::endl;
+	std::cout << "To link: ";
+	for(int i =0; i < curr_toLink.size(); ++i)
+		std::cout << curr_toLink[i] << ' ';
+	std::cout << std::endl;
+	const std::string objFolder = wd + "/" + reqFolders[1] + "/" + subFolders[1]; 
+	for(int i = 0; i < curr_toLink.size(); ++i){
+		for(int j = 0; j < toCompile.size(); ++j){
+			if((objFolder + "/" + getName(toCompile[j]) + ".o") == curr_toLink[i]){
+				is_updated = "false";
+				break;
+			}
+		}
+		if(is_updated == "false") break;
+	}
+	bool res = (is_updated == "false");
+	// std::ofstream curr_out(curr_config);
+	// curr_out << is_updated << std::endl;
+	// for(int i = 0; i < curr_parameters.size(); ++i)
+	// 	curr_out << curr_parameters[i] << std::endl;
+	// curr_out.close();
+
+	// true / false (is up to date)
+	// parameters
+
+	for(int i = 1; i < configs.size(); ++i){
+		if(configs[i] == curr_config) continue;
+		std::string new_is_updated;
+		std::vector<std::string> parameters, allLibs;
+		std::ifstream in(configs[i]);
+		std::getline(in, new_is_updated);
+		std::string line;
+		while(std::getline(in,line)) parameters.push_back(line);
+		in.close();
+
+		std::vector<std::string> toLink = toLinkList(parameters, wd, true, std::vector<std::string>{});
+		for(int i = 0; i < toLink.size(); ++i){
+			for(int j = 0; j < toCompile.size(); ++j){
+				if((objFolder + "/" + getName(toCompile[j]) + ".o") == toLink[i]){
+					new_is_updated = "false";
+					break;
+				}
+			}
+			if(new_is_updated == "false") break;
+		}
+
+		std::ofstream out(configs[i]);
+		out << new_is_updated << std::endl;
+		for(int i = 0; i < parameters.size(); ++i)
+			out << parameters[i] << std::endl;
+		out.close();
+	}
+	std::cout << "RES: " << int(res) << std::endl; 
+	return res;
 }
