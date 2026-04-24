@@ -60,8 +60,6 @@ void printHelp(){
 	std::cout << "\t--clear-options, --clean-options\tReset force-link, force-unlink, additional directories, no-include directories lists" << std::endl;
 	std::cout << "\t--CXX [c++ compiler]" << std::endl;
 	std::cout << "\t--CC [c compiler]" << std::endl;
-	std::cout << "\t--C++standart [c++ standart]" << std::endl;
-	std::cout << "\t--Cstandart [c standart]" << std::endl;
 	std::cout << std::endl;
 }
 void printStatus(const std::vector<std::string>& parameters){

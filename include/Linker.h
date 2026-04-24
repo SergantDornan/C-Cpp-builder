@@ -2,7 +2,8 @@
 #include "ELFparser.h"
 #include "ARparse.h"
 #include <thread>
-const std::string postSharedLink = "export LD_LIBRARY_PATH=$LD_LIBRARY_PATH"; //(Добавлять папки как ..._PATH:./aboba:./boba)
+
+#define POST_SHARED_LINK "export LD_LIBRARY_PATH=$LD_LIBRARY_PATH" //(Добавлять папки как ..._PATH:./aboba:./boba)
 const size_t numT = std::thread::hardware_concurrency();
 int findLinks(std::vector<std::string>&, const std::vector<binFile>&,
 	const binFile&,std::map<std::string,std::string>&, const bool, std::vector<binFile>&,

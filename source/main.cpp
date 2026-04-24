@@ -161,7 +161,7 @@ int main(int argc, char* argv[]){
 	bool idgaf = (find(args, "--idgaf") != -1);
 	bool relink = (find(args, "--relink") != -1 || find(args, "-rel") != -1);
 	std::string wd = createEssentials(rebuild);
-	std::string projectConfig = wd + "/" + configFile;
+	std::string projectConfig = wd + "/" + CONFIG_FILE;
 	std::string prInName, prOutName;
 	std::ifstream f(projectConfig);
 	std::getline(f, prInName);

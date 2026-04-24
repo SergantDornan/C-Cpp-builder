@@ -15,10 +15,10 @@ std::vector<std::string> compile(const std::string& wd,const std::vector<std::st
 
     if(numThreads == -1) numThreads = std::thread::hardware_concurrency();
     std::vector<std::string> toCompile;
-    std::string bd = wd + "/" + reqFolders[1];
-    std::string id = wd + "/" + reqFolders[0];
-    auto HDdirs = getDirs(id + "/" + subFolders[0]);
-    auto SDdirs = getDirs(bd + "/" + subFolders[0]);
+    std::string bd = wd + "/" + SOURCE_DIR;
+    std::string id = wd + "/" + HEADERS_DIR;
+    auto HDdirs = getDirs(id + "/" + DEPS_DIR);
+    auto SDdirs = getDirs(bd + "/" + DEPS_DIR);
     //Обновления списка зависимостей
     int code = 0;
     UpdateDependencies(HDdirs, SDdirs, bd, id, map, leaves);
@@ -71,7 +71,7 @@ int compileFile(const std::string& path,
     }
     std::string compiler;
     int code = -1;
-    std::string objFile = bd + "/" + subFolders[1] + "/" + convertPathToName(depfile[0]) + ".o";
+    std::string objFile = bd + "/" + OBJECTS_DIR + "/" + convertPathToName(depfile[0]) + ".o";
     std::string include = "";
     std::vector<std::string> incDirs;
     if(depfile[4] != "-1") incDirs = split(depfile[4]);

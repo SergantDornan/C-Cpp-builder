@@ -19,6 +19,14 @@ int find(const std::vector<T>& v,const T& s){
     return -1;
 }
 
+template <size_t N>
+int find(const char* const (&v)[N], const std::string& s){
+    for(int i = 0; i < N; ++i){
+        if(s == v[i]) return i;
+    }
+    return -1;
+}
+
 int find (const std::vector<std::string>& v, const char* s);
 
 template <class T>

@@ -110,9 +110,9 @@ void UpdateDependencies(const std::vector<std::string>& HDdirs,
                 if(find(addChangedFiles, changes[j].first) == -1) addChangedFiles.push_back(changes[j].first);
                 std::string pathToDepfile;
                 if(getExt(changedFiles[i]) == "h" || getExt(changedFiles[i]) == "hpp")
-                    pathToDepfile = id + "/" + subFolders[0] + "/" + convertPathToName(changedFiles[i]);
+                    pathToDepfile = id + "/" + DEPS_DIR + "/" + convertPathToName(changedFiles[i]);
                 else
-                    pathToDepfile = bd + "/" + subFolders[0] + "/" + convertPathToName(changedFiles[i]);
+                    pathToDepfile = bd + "/" + DEPS_DIR + "/" + convertPathToName(changedFiles[i]);
                 if(changes[j].second) data[changes[j].first][1].push_back(pathToDepfile);
                 else data[changes[j].first][1].erase(
                     std::find(data[changes[j].first][1].begin(),
@@ -125,9 +125,9 @@ void UpdateDependencies(const std::vector<std::string>& HDdirs,
     for(int i = 0; i < changedFiles.size(); ++i){
         std::string pathToDepfile;
         if(getExt(changedFiles[i]) == "h" || getExt(changedFiles[i]) == "hpp")
-            pathToDepfile = id + "/" + subFolders[0] + "/" + convertPathToName(changedFiles[i]);
+            pathToDepfile = id + "/" + DEPS_DIR + "/" + convertPathToName(changedFiles[i]);
         else
-            pathToDepfile = bd + "/" + subFolders[0] + "/" + convertPathToName(changedFiles[i]);
+            pathToDepfile = bd + "/" + DEPS_DIR + "/" + convertPathToName(changedFiles[i]);
         std::string time;
         std::ifstream file(pathToDepfile);
         std::getline(file, time);
@@ -164,8 +164,8 @@ bool createDepfiles(const std::string& wd,
 	const bool log)
 {
 	bool changeSet = false;
-	std::string bd = wd + "/" + reqFolders[1];
-	auto dirs = getDirs(bd + "/" + subFolders[0] + "/");
+	std::string bd = wd + "/" + SOURCE_DIR;
+	auto dirs = getDirs(bd + "/" + DEPS_DIR + "/");
 	//Проход по dep файлам:
 
     // Удаление лишних деп файлов и объектников и sym у сурс файлов
@@ -177,14 +177,14 @@ bool createDepfiles(const std::string& wd,
 		file.close();
         if(find(allSource, line) == -1){
 			changeSet = true;
-			std::string objFile = wd + "/" + reqFolders[1] + "/" + subFolders[1] + "/" + getName(dirs[i]) + ".o";
-			std::string symFile = wd + "/" + reqFolders[2] + "/" + getName(dirs[i]) + ".sym";
+			std::string objFile = wd + "/" + SOURCE_DIR + "/" + OBJECTS_DIR + "/" + getName(dirs[i]) + ".o";
+			std::string symFile = wd + "/" + SYM_DIR + "/" + getName(dirs[i]) + ".sym";
             cmd += (" " + dirs[i] + " " + objFile + " " + symFile);
 		}
 	}
 
     // Удаление лишних деп файлов у хедеров
-	dirs = getDirs(wd + "/" + reqFolders[0] + "/" + subFolders[0] + "/");
+	dirs = getDirs(wd + "/" + HEADERS_DIR + "/" + DEPS_DIR + "/");
 	for(int i = 1; i < dirs.size(); ++i){
 		std::ifstream file(dirs[i]);
 		std::string line;
@@ -199,7 +199,7 @@ bool createDepfiles(const std::string& wd,
 
 	// Проход по хедерам и сурс файлам
 	for(int i = 0; i < allHeaders.size(); ++i){
-		std::string file = wd + "/" + reqFolders[0] + "/" + subFolders[0] + "/" + convertPathToName(allHeaders[i]);
+		std::string file = wd + "/" + HEADERS_DIR + "/" + DEPS_DIR + "/" + convertPathToName(allHeaders[i]);
 		if(!exists(file)){
 			changeSet = true;
 			cmd = "touch " + file;
@@ -215,7 +215,7 @@ bool createDepfiles(const std::string& wd,
 	}
 
 	for(int i = 0; i < allSource.size(); ++i){
-		std::string file = bd + "/" + subFolders[0] + "/" + convertPathToName(allSource[i]);
+		std::string file = bd + "/" + DEPS_DIR + "/" + convertPathToName(allSource[i]);
 		if(!exists(file)){
 			changeSet = true;
 			cmd = "touch " + file;
@@ -247,15 +247,15 @@ void rebuildForSharedLib(const std::string& n1, const std::string& n2,
     if((!isSharedLib(n1) && isSharedLib(n2)) || 
         (isSharedLib(n1) && !isSharedLib(n2)))
     {
-        std::string dir = wd + "/" + reqFolders[1] + "/" + subFolders[0];
+        std::string dir = wd + "/" + SOURCE_DIR + "/" + DEPS_DIR;
         std::string cmd = "rm -rf";
         auto dirs = getDirs(dir);
         for(int i = 1; i < dirs.size(); ++i)
             cmd += (" " + dirs[i]);
-        dirs = getDirs(wd + "/" + reqFolders[2]);
+        dirs = getDirs(wd + "/" + SYM_DIR);
         for(int i = 1; i < dirs.size(); ++i)
             cmd += (" " + dirs[i]);
-        dirs = getDirs(wd + "/" + reqFolders[1] + "/" + subFolders[1]);
+        dirs = getDirs(wd + "/" + SOURCE_DIR + "/" + OBJECTS_DIR);
         for(int i = 1; i < dirs.size(); ++i)
             cmd += (" " + dirs[i]);
         system(cmd.c_str());
@@ -281,8 +281,8 @@ void updateSymfiles(const std::string& wd, const std::vector<std::string>& allLi
         return true;
     };
 
-    auto allObj = getDirs(wd + "/" + reqFolders[1] + "/" + subFolders[1]);
-    auto dirs = getDirs(wd + "/" + reqFolders[2]);
+    auto allObj = getDirs(wd + "/" + SOURCE_DIR + "/" + OBJECTS_DIR);
+    auto dirs = getDirs(wd + "/" + SYM_DIR);
     std::string cmd = "rm";
     for(int i = 1; i < dirs.size(); ++i){
         std::ifstream file(dirs[i]);

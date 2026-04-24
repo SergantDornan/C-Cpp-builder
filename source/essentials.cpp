@@ -1,6 +1,13 @@
 #include "essentials.h"
+
+#define REQ_FOLDERS_SIZE 3
+#define SUB_FOLDERS_SIZE 2
+
+static constexpr const char* reqFolders[] = {HEADERS_DIR, SOURCE_DIR, SYM_DIR};
+static constexpr const char* subFolders[] = {DEPS_DIR, OBJECTS_DIR};
+
 void removeBuildFolder(const std::string& currDir, bool silent){
-	std::string configPath = root + "/" + configFile;
+	std::string configPath = root + "/" + CONFIG_FILE;
 	std::ifstream config(configPath);
 	std::string line;
 	std::vector<std::string> lines;
@@ -30,7 +37,7 @@ std::string createEssentials(const bool reb){
 	bool isConfig = false;
 	for(int i = 1; i < mainDirs.size(); ++i){
 		std::string name = getName(mainDirs[i]);
-		if(name == configFile){
+		if(name == CONFIG_FILE){
 			isConfig = true;
 			break;
 		}
@@ -42,10 +49,10 @@ std::string createEssentials(const bool reb){
 				system(cmd.c_str()); 
  			}
 		}
-		std::string cmd = "touch " + root + "/" + configFile;
+		std::string cmd = "touch " + root + "/" + CONFIG_FILE;
 		system(cmd.c_str()); 
 	}
-	std::string configPath = root + "/" + configFile;
+	std::string configPath = root + "/" + CONFIG_FILE;
 	std::ifstream config(configPath);
 	std::string line;
 	bool isDir = false;
@@ -69,7 +76,6 @@ std::string createEssentials(const bool reb){
 		else
 			it++;
 	}
-
 
 	std::string index;
 	for(int i = 0; i < projectList.size(); ++i){
@@ -114,13 +120,13 @@ std::string createEssentials(const bool reb){
 	for(int i = 0; i < inDirNames.size(); ++i)
 		inDirNames[i] = getName(inDirNames[i]);
 	bool rebuild = false;
-	for(int i = 0; i < reqFolders.size(); ++i){
+	for(int i = 0; i < REQ_FOLDERS_SIZE; ++i){
 		if(find(inDirNames,reqFolders[i]) == -1){
 			rebuild = true;
 			break;
 		}
 	}
-	if(find(inDirNames, configFile) == -1)
+	if(find(inDirNames, CONFIG_FILE) == -1)
 		rebuild = true;
 	if(rebuild){
 		for(int i = 1; i < inDir.size(); ++i){
@@ -129,14 +135,15 @@ std::string createEssentials(const bool reb){
 				system(cmd.c_str());
 			}
 		}
-		for(int i = 0; i < reqFolders.size(); ++i){
+
+		for(int i = 0; i < REQ_FOLDERS_SIZE; ++i){
 			std::string cmd = "mkdir " + folder + "/" + reqFolders[i];
 			system(cmd.c_str());
 		}
-		if(!exists(folder + "/" + configFile)){
-			std::string cmd = "touch " + folder + "/" + configFile;
+		if(!exists(folder + "/" + CONFIG_FILE)){
+			std::string cmd = "touch " + folder + "/" + CONFIG_FILE;
 			system(cmd.c_str());
-			std::ofstream out(folder + "/" + configFile);
+			std::ofstream out(folder + "/" + CONFIG_FILE);
 			out << "-1" << std::endl; // 0 main input
 			out << "out" << std::endl; // 1 output name
 			out << "-1" << std::endl; // 2 libs linking (force)
@@ -156,19 +163,19 @@ std::string createEssentials(const bool reb){
 			out.close();
 		}
 	}
-	for(int i = 0; i < reqFolders.size(); ++i){
+	for(int i = 0; i < REQ_FOLDERS_SIZE; ++i){
 		std::string subFolder = folder + "/" + reqFolders[i];
 		auto innerDir = getDirs(subFolder);
 		auto innerDirNames = innerDir;
 		for(int j = 0; j < innerDirNames.size(); ++j)
 			innerDirNames[j] = getName(innerDirNames[j]);
-		if(i == 0 && find(innerDirNames, subFolders[0]) == -1){
-			std::string cmd = "mkdir " + subFolder + "/" + subFolders[0];
+		if(i == 0 && find(innerDirNames, DEPS_DIR) == -1){
+			std::string cmd = "mkdir " + subFolder + "/" + DEPS_DIR;
 			system(cmd.c_str());
 		}
 		else if(i == 1){
 			bool rebuildSubFolder = false;
-			for(int j = 0; j < subFolders.size(); ++j){
+			for(int j = 0; j < SUB_FOLDERS_SIZE; ++j){
 				if(find(innerDirNames, subFolders[j]) == -1){
 					rebuildSubFolder = true;
 					break;
@@ -179,7 +186,7 @@ std::string createEssentials(const bool reb){
 					std::string cmd = "rm -rf " + innerDir[j];
 					system(cmd.c_str());
 				}
-				for(int j = 0; j < subFolders.size(); ++j){
+				for(int j = 0; j < SUB_FOLDERS_SIZE; ++j){
 					std::string cmd = "mkdir " + subFolder + "/" + subFolders[j];
 					system(cmd.c_str());
 				}

@@ -2,13 +2,13 @@
 #define FLAGSH
 
 #include "filework.h"
-const std::vector<std::string> possibleFlags = {"--rebuild", "-reb", 
+static constexpr const char* possibleFlags[] = {"--rebuild", "-reb", 
 	"-o", "--no-link-force", "--link-force", "--default-link",
 	"--no-link-lib", "--CC", "--CXX", "--compile-flags", "--link-flags", "--clear-flags",
 	"--relink", "-rel", "--idgaf", "--no-include", "--clean-flags", "--flags-clear", "--flags-clean",
 	"--default-include", "--clear-options", "--clean-options", "-log"};
-const std::vector<std::string> switchFlags = {"--compile-flags", "--link-flags"};
-const std::vector<std::string> keyWords = {"run", "status", "help", "config"};
+static constexpr const char* switchFlags[] = {"--compile-flags", "--link-flags"};
+static constexpr const char* keyWords[] = {"run", "status", "help", "config"};
 bool isFlag(const std::string&);
 std::vector<std::string> getParameters(std::vector<std::string>&,
 	const std::string& , const std::string&, const std::string&, bool&, bool&);

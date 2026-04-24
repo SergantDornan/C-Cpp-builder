@@ -37,7 +37,7 @@ void createSymfile(binFile& newfile, const std::string& path){
 std::vector<std::string> toLinkList(const std::vector<std::string>& parameters,
 	const std::string& wd,const bool idgaf, const std::vector<std::string>& allLibs){
 
-	std::string objFolder = wd + "/" + reqFolders[1] + "/" + subFolders[1];
+	std::string objFolder = wd + "/" + SOURCE_DIR + "/" + OBJECTS_DIR;
 	auto allObj = getDirs(objFolder);
 	allObj.erase(allObj.begin());
 	std::vector<std::string> toLink;
@@ -104,12 +104,12 @@ std::vector<std::string> toLinkList(const std::vector<std::string>& parameters,
 					std::cerr << "multiple definition of symbol: " << std::endl;
 					std::cerr << binLink[j].defSyms[h] << std::endl;
 					std::cerr << std::endl;
-					std::ifstream file(wd + "/" + reqFolders[1] + "/" + subFolders[0] + "/" + getNameNoExt(binLink[i].name));
+					std::ifstream file(wd + "/" + SOURCE_DIR + "/" + DEPS_DIR + "/" + getNameNoExt(binLink[i].name));
 					std::string line;
 					std::getline(file, line);
 					file.close();
 					std::cerr << "First definition in file: " << getName(line) <<  std::endl;
-					std::ifstream file1(wd + "/" + reqFolders[1] + "/" + subFolders[0] + "/" + getNameNoExt(binLink[j].name));
+					std::ifstream file1(wd + "/" + SOURCE_DIR + "/" + DEPS_DIR + "/" + getNameNoExt(binLink[j].name));
 					std::getline(file1, line);
 					file1.close();
 					std::cerr << "Second definition in file: " << getName(line) << std::endl;
@@ -131,7 +131,7 @@ void OneThreadObjAnal(const std::string& wd, const std::string& name,binFile& ma
 
 	// ------------- OBJ ANAL -------------
 	for(int i = 0; i < dirs.size(); ++i){
-		std::string symFile = (wd + "/" + reqFolders[2] + "/" + getNameNoExt(dirs[i]) + ".sym");
+		std::string symFile = (wd + "/" + SYM_DIR + "/" + getNameNoExt(dirs[i]) + ".sym");
 		binFile newfile = {dirs[i]};
 		if(exists(symFile)) readSymfile(newfile, symFile);
 		else{
@@ -147,7 +147,7 @@ void OneThreadObjAnal(const std::string& wd, const std::string& name,binFile& ma
 	}
 	// ------------- LIB ANAL -------------
 	for(int i = 0; i < allLibs.size(); ++i){
-		std::string symFile = (wd + "/" + reqFolders[2] + "/" + convertPathToName(allLibs[i]) + ".sym");
+		std::string symFile = (wd + "/" + SYM_DIR + "/" + convertPathToName(allLibs[i]) + ".sym");
 		binFile newfile = {allLibs[i]};
 		if(exists(symFile)) readSymfile(newfile, symFile);
 		else{
@@ -176,12 +176,12 @@ int findLinks(std::vector<std::string>& toLink, const std::vector<binFile>& file
 					std::cerr << "multiple definition of symbol: " << std::endl;
 					std::cerr << file.callSyms[i] << std::endl;
 					std::cerr << std::endl;
-					std::ifstream file0(wd + "/" + reqFolders[1] + "/" + subFolders[0] + "/" + getNameNoExt(syms[file.callSyms[i]]));
+					std::ifstream file0(wd + "/" + SOURCE_DIR + "/" + DEPS_DIR + "/" + getNameNoExt(syms[file.callSyms[i]]));
 					std::string line;
 					std::getline(file0, line);
 					file0.close();
 					std::cerr << "First definition in file: " << getName(line) << std::endl;
-					std::ifstream file1(wd + "/" + reqFolders[1] + "/" + subFolders[0] + "/" + getNameNoExt(filesInfo[j].name));
+					std::ifstream file1(wd + "/" + SOURCE_DIR + "/" + DEPS_DIR + "/" + getNameNoExt(filesInfo[j].name));
 					std::getline(file1, line);
 					file1.close();
 					std::cerr << "Second definition in file: " << getName(line) << std::endl;
@@ -231,7 +231,7 @@ std::string link(const std::string& wd,
 	bool linking = updateOutputFiles(toCompile, wd, parameters, toLink) | relink; 
 	if(!linking) return "nothing to link";
 
-	std::string objFolder = wd + "/" + reqFolders[1] + "/" + subFolders[1];
+	std::string objFolder = wd + "/" + SOURCE_DIR + "/" + OBJECTS_DIR;
 	if(exists(parameters[1])){
 		std::string cmd = "rm " + parameters[1];
 		system(cmd.c_str());
@@ -254,7 +254,7 @@ std::string link(const std::string& wd,
 	if(!log){
 		std::cout << std::endl;
 		for(int i = 0; i < toLink.size(); ++i){ // очень криво
-			std::ifstream file(wd + "/" + reqFolders[1] + "/" + subFolders[0] + "/" + getNameNoExt(toLink[i]));
+			std::ifstream file(wd + "/" + SOURCE_DIR + "/" + DEPS_DIR + "/" + getNameNoExt(toLink[i]));
 			std::string line;
 			std::getline(file, line);
 			file.close();
@@ -311,7 +311,7 @@ std::string link(const std::string& wd,
 	out.close();
 
 	if(sharedLibDirs.size() > 0){
-		std::string cmd = postSharedLink;
+		std::string cmd = POST_SHARED_LINK;
 		for(int i = 0; i < sharedLibDirs.size(); ++i)
 			cmd += (":" + sharedLibDirs[i]);
 		if(log){
@@ -365,7 +365,7 @@ bool updateOutputFiles(const std::vector<std::string>& toCompile,
 	for(int i =0; i < curr_toLink.size(); ++i)
 		std::cout << curr_toLink[i] << ' ';
 	std::cout << std::endl;
-	const std::string objFolder = wd + "/" + reqFolders[1] + "/" + subFolders[1]; 
+	const std::string objFolder = wd + "/" + SOURCE_DIR + "/" + OBJECTS_DIR; 
 	for(int i = 0; i < curr_toLink.size(); ++i){
 		for(int j = 0; j < toCompile.size(); ++j){
 			if((objFolder + "/" + getName(toCompile[j]) + ".o") == curr_toLink[i]){
