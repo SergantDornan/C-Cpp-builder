@@ -4,8 +4,9 @@ const std::string root = getHomedir() + "/builder";
 std::string cd = cwd();
 const bool pocket = (root == "./builder");
 const std::string configFile = "config";
-const std::vector<std::string> reqFolders = {"headers","source","sym"}; // Если меньше двух имен - будет SegFault
-const std::vector<std::string> subFolders = {"deps", "objects"}; // Если меньше трех имен - будет SegFault
+const std::string outputFilesConfig = "outputFilesConfig";
+const std::vector<std::string> reqFolders = {"headers","source","sym"}; // Если меньше трех имен - будет SegFault
+const std::vector<std::string> subFolders = {"deps", "objects"}; // Если меньше двух имен - будет SegFault
 
 std::string convertPathToName(const std::string& path, const char ch){
     std::string result = path;
@@ -94,4 +95,78 @@ void getIncludes(std::vector<std::string>& includes,
         }
     }
     input.close();
+}
+
+bool checkOutputFiles(const std::string& output, const std::string& wd, bool compileChange){
+    std::string line;
+    std::vector<std::pair<std::string, std::string>> config;
+    std::string configPath = wd + "/" + outputFilesConfig;
+    if(exists(configPath)){
+        std::ifstream in(configPath);
+        while(std::getline(in, line)) {
+            auto s = split(line);
+            if(s.size() != 2){
+                std::cerr << "======================= ERROR =======================" << std::endl;
+                std::cerr << "BuilderFilework.cpp : checkOutputFiles()" << std::endl;
+                std::cerr << "Unexpected error, wrong config format" << std::endl;
+                std::cerr << "This is belder internal error, recompile belder" << std::endl;
+                std::cerr << std::endl;
+                continue;
+            }
+            config.push_back({s[0], s[1]});
+        }
+        in.close();
+    }
+    else{
+        std::string cmd = "touch " + configPath;
+        system(cmd.c_str());
+    }
+
+    auto it = config.begin();
+    while(it != config.end()){
+        if(!exists((*it).first)) config.erase(it);
+        else ++it;
+    }
+
+    int index = -1;
+    for(int i = 0; i < config.size(); ++i){
+        if(config[i].first == output){
+            index = i;
+            break;
+        }
+    }
+
+    if(compileChange){
+        for(int i = 0; i < config.size(); ++i) config[i].second = "0";
+    }
+    
+    bool relink = false;
+
+    if(index == -1){
+        config.push_back({output, "1"});
+        relink = true;
+    }
+    else{
+        relink = (config[index].second == "0");
+        config[index].second = "1";
+    }
+    std::ofstream out(configPath);
+    for(int i = 0; i < config.size(); ++i) out << config[i].first << " " << config[i].second << std::endl;
+    out.close();
+
+    return relink;
+}
+
+void clearAllDepFiles(const std::string& wd){
+    std::vector<std::vector<std::string>> dirs;
+    dirs.push_back(getDirs(wd + "/" + reqFolders[0] + "/" + subFolders[0]));
+    dirs.push_back(getDirs(wd + "/" + reqFolders[1] + "/" + subFolders[0]));
+    dirs.push_back(getDirs(wd + "/" + reqFolders[1] + "/" + subFolders[1]));
+    dirs.push_back(getDirs(wd + "/" + reqFolders[2]));
+    std::string cmd = "rm ";
+    for(int i = 0; i < dirs.size(); ++i){
+        for(int j = 1; j < dirs[i].size(); ++j)
+            cmd += (dirs[i][j] + " ");
+    }
+    if(cmd != "rm ") system(cmd.c_str());
 }

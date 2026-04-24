@@ -4,7 +4,7 @@ INCDIR=./include
 SOURCEDIR=./source
 deps=./depsAndObjects
 CPPC=g++
-C++standart=-std=c++23
+C++standart=-std=c++17
 OPT=-O2
 DEPFLAGS=-MP -MD
 GENERALFLAGS=$(C++standart) -g3 -w

@@ -246,7 +246,7 @@ void rewriteLine(const std::string& path,
     std::ifstream input(path);
     if(!input.is_open()){
         std::cerr << "================= ERROR =================" << std::endl;
-        std::cerr << "installer.cpp: rewriteLine: cannot open file: " << std::endl;
+        std::cerr << "filework.cpp: rewriteLine: cannot open file: " << std::endl;
         std::cerr << path << std::endl;
         std::cerr << std::endl;
         return;

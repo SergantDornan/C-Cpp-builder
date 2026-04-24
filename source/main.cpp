@@ -99,8 +99,7 @@ int main(int argc, char* argv[]){
 					find(args, "mrproper") != -1 ||
 					find(args, "silent_clear") != -1);
 
-	if(exists(root) && clear)
-	{
+	if(exists(root) && clear){
 		if(pocket){
 			std::string cmd = "rm -rf " + root;
 			system(cmd.c_str());
@@ -156,19 +155,11 @@ int main(int argc, char* argv[]){
 		}
 		return 0;
 	}
-
 	bool log = (find(args, "-log") != -1);
 	bool rebuild = ((find(args, "-reb") != -1) || (find(args, "--rebuild") != -1));
 	bool run = (find(args, "run") != -1);
 	bool idgaf = (find(args, "--idgaf") != -1);
-	bool relink = (find(args, "--no-link-force") != -1 || find(args, "--link-force") != -1 ||
-		find(args, "--default-link") != -1 || find(args, "--relink") != -1 || find(args, "-rel") != -1);
-	for(int i = 0; i < args.size(); ++i){
-		if(args[i].size() > 2 && args[i][0] == '-' && args[i][1] == 'l' && args[i] != "-log"){
-			relink = true;
-			break;
-		}
-	}
+	bool relink = (find(args, "--relink") != -1 || find(args, "-rel") != -1);
 	std::string wd = createEssentials(rebuild);
 	std::string projectConfig = wd + "/" + configFile;
 	std::string prInName, prOutName;
@@ -176,10 +167,14 @@ int main(int argc, char* argv[]){
 	std::getline(f, prInName);
 	std::getline(f, prOutName);
 	f.close();
-	std::vector<std::string> parameters = getParameters(args, projectConfig, cd, prInName);
+	bool parameters_recompile = false, parameters_relink = false;
+	std::vector<std::string> parameters = getParameters(args, projectConfig, cd, prInName,
+		parameters_recompile, parameters_relink);
+	rebuild |= parameters_recompile;
+	relink |= parameters_relink;
+	if(rebuild) clearAllDepFiles(wd);
 	rebuildForSharedLib(prOutName, parameters[1], wd);
-	if(prOutName != parameters[1] || prInName != parameters[0]) relink = true;
-
+	//if(prOutName != parameters[1] || prInName != parameters[0]) relink = true;
 	std::ofstream out(projectConfig);
 	for(int i = 0; i < parameters.size(); ++i) out << parameters[i] << std::endl;
 	out.close();
@@ -237,11 +232,14 @@ int main(int argc, char* argv[]){
 	bool changeSet = createDepfiles(wd, allHeaders, allSource, log);
 	std::vector<std::string> toCompile = compile(wd,parameters,changeSet,log,linkType,map,leaves,numThreads);
 	updateSymfiles(wd, allLibs);
+
+	relink |= checkOutputFiles(parameters[1], wd, (toCompile.size() != 0 && toCompile[0] != "-1"));
+
 	std::string linkmsg = link(wd, parameters, includes, toCompile, 
 		log, linkType, relink, idgaf, allLibs);
 	
 	if(linkmsg == "success" && exists(parameters[1]))
-		std::cout << "============================ SUCCESS ============================" << std::endl;
+		std::cout << "============================ SUCCESS ============================\n" << std::endl;
     else if(linkmsg == "nothing to link" && exists(parameters[1]))
     	std::cout << "belder: nothing to link" << std::endl;
     else if(linkmsg == "compilation error")

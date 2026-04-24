@@ -25,11 +25,10 @@ std::vector<int> getMap(
 		std::cerr << std::endl;
 		return std::vector<int>({});
 	}
-	merge_sort(files);
 	for(int i = 0; i < files.size(); ++i){
 		if(files[i][0] == '/') files[i] = std::string(files[i].begin() + 1, files[i].end());
 	}
-
+	merge_sort(files);
 	std::vector<int> leaves;
 	FileNode rootDir; 
 	rootDir.name = "/";
@@ -119,10 +118,10 @@ std::pair<std::string,std::string> pathDecoder(
 	for(int i = 0; i < rootNodes.size(); ++i){
 		std::vector<int> endNodes;
 		if(map[rootNodes[i]].parent == -1){
-			std::cout << "====================== VERY UNEXPECTED ERROR ======================" << std::endl;
-			std::cout << "Mapping.cpp, pathDecoder" << std::endl;
-			std::cout << "this should never happen" << std::endl;
-			std::cout << "congrats" << std::endl;
+			std::cerr << "====================== VERY UNEXPECTED ERROR ======================" << std::endl;
+			std::cerr << "Mapping.cpp, pathDecoder" << std::endl;
+			std::cerr << "this should never happen" << std::endl;
+			std::cerr << "congrats" << std::endl;
 			return std::pair<std::string,std::string>({"-1","-1"});
 		}
 		endNodes.push_back(map[rootNodes[i]].parent);
@@ -186,7 +185,7 @@ std::pair<std::string,std::string> pathDecoder(
 		std::cerr << "=================== ERROR ===================" << std::endl;
 		std::cerr << "No files found for this include path:" << std::endl;
 		std::cerr << "\t" << path << std::endl;
-		std::cerr << "This might happen if you got a lot of ../../../../ in #include line and empty folders" << std::endl;
+		std::cerr << "This might happen if you got a lot of ../../../../ in #include line and empty folders in the project" << std::endl;
 		std::cerr << "Belder does not see empty folders (folders, that do not have files at the end)" << std::endl;
 		char y = 'n';
 		std::cerr << "Do you want to see map, contained inside belder? [y/n]: ";

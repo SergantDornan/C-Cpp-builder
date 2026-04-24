@@ -14,7 +14,7 @@ bool isFlag(const std::string& s){
 
 std::vector<std::string> getParameters(std::vector<std::string>& args,
 	const std::string& projectConfig, const std::string& cd,
-	const std::string& prInName)
+	const std::string& prInName, bool& recompile, bool& relink)
 {
 
 	std::vector<std::string> parameters;
@@ -23,18 +23,20 @@ std::vector<std::string> getParameters(std::vector<std::string>& args,
 	while(std::getline(in, line)) parameters.push_back(line);
 	in.close();
 
+	auto pr_parameters = parameters;
+
 	bool clearFlags = (find(args, "--clear-flags") != -1 || find(args, "--clean-flags") != -1 ||
 		find(args, "--flags-clear") != -1 || find(args, "--flags-clean") != -1);
 	bool clearOptions = (find(args, "--clean-options") != -1 || find(args, "--clear-options") != -1);
 	bool isFoundEntry = (findEntryFile(args,cd, parameters) == 0);
 
-	// if(prInName != parameters[0] && prInName != "-1" && isFoundEntry){
-	// 	std::cout << std::endl;
-	// 	std::cout << "------- Change of entry file, clearing all old flags and options -------" << std::endl;
-	// 	std::cout << std::endl;
-	// 	clearOptions = true;
-	// 	clearFlags = true;
-	// }
+	if(prInName != parameters[0] && prInName != "-1" && isFoundEntry){
+		std::cout << std::endl;
+		std::cout << "------- Change of entry file, clearing all old options -------" << std::endl;
+		std::cout << std::endl;
+		clearOptions = true;
+		//clearFlags = true;
+	}
 
 	if(clearFlags || clearOptions)
 	{
@@ -53,11 +55,14 @@ std::vector<std::string> getParameters(std::vector<std::string>& args,
 	}
 	auto it = args.begin();
 	while(it != args.end()){
-		//if(isStandart(*it)){
-		//	parameters[7] = *it;
-		//	args.erase(it);
-		//}
-		if(isOpt(*it)){
+		if(isStandart(*it)){
+			if((*it).find("c++") != std::string::npos)
+				parameters[7] = *it;
+			else
+				parameters[15] = *it;
+			args.erase(it);
+		}
+		else if(isOpt(*it)){
 			parameters[8] = *it;
 			args.erase(it);
 		}
@@ -102,6 +107,7 @@ std::vector<std::string> getParameters(std::vector<std::string>& args,
 	getAddDirs(args,cd, parameters);
 	getSpecFlags(args, parameters[10], "--compile-flags");
 	getSpecFlags(args, parameters[11], "--link-flags");
+	// Следующая функция может насрать в Link flags!!!
 	FindForceLinkUnlink(args,cd, parameters);
 	getRestFlags(args, parameters[12]);
 	auto compilers = split(parameters[5]);
@@ -114,6 +120,22 @@ std::vector<std::string> getParameters(std::vector<std::string>& args,
 	if(getFolder(parameters[1]) == "")
 		parameters[1] = (cd + "/" + parameters[1]);
 
+	int compile_sensitive_options[7] = {5,7,8,9,10,12,15};
+	int link_sensitive_options[5] = {2,3,4,11,13};
+
+	for(int i = 0; i < 7; ++i){
+		if(parameters[compile_sensitive_options[i]] != pr_parameters[compile_sensitive_options[i]]) {
+			recompile = true;
+			break;
+		}
+	}
+
+	for(int i = 0; i < 5; ++i){
+		if(parameters[link_sensitive_options[i]] != pr_parameters[link_sensitive_options[i]]){
+			relink = true;
+			break;
+		}
+	}
 	return parameters;
 }
 bool isStandart(const std::string& s){

@@ -11,7 +11,7 @@ const std::vector<std::string> switchFlags = {"--compile-flags", "--link-flags"}
 const std::vector<std::string> keyWords = {"run", "status", "help", "config"};
 bool isFlag(const std::string&);
 std::vector<std::string> getParameters(std::vector<std::string>&,
-	const std::string& , const std::string&, const std::string&);
+	const std::string& , const std::string&, const std::string&, bool&, bool&);
 void getAddDirs(std::vector<std::string>&,const std::string&, std::vector<std::string>&);
 int findEntryFile(const std::vector<std::string>&,
 	const std::string&,  std::vector<std::string>&);

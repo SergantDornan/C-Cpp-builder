@@ -238,9 +238,9 @@ std::string link(const std::string& wd,
 		}
 		if(linking) break;
 	}
-	if(!exists(parameters[1]) || relink) linking = true;
-	if(!linking)
-		return "nothing to link";
+	linking |= relink;
+	
+	if(!linking) return "nothing to link";
 
 	if(exists(parameters[1])){
 		std::string cmd = "rm " + parameters[1];
