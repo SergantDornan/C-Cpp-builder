@@ -99,10 +99,10 @@ void clearAllDepFiles(const std::string& wd){
     dirs.push_back(getDirs(wd + "/" + SOURCE_DIR + "/" + DEPS_DIR));
     dirs.push_back(getDirs(wd + "/" + SOURCE_DIR + "/" + OBJECTS_DIR));
     dirs.push_back(getDirs(wd + "/" + SYM_DIR));
-    std::string cmd = "rm ";
+    std::vector<std::string> files_to_remove;
     for(int i = 0; i < dirs.size(); ++i){
         for(int j = 1; j < dirs[i].size(); ++j)
-            cmd += (dirs[i][j] + " ");
+            files_to_remove.push_back(dirs[i][j]);
     }
-    if(cmd != "rm ") system(cmd.c_str());
+    removeFiles(files_to_remove);
 }

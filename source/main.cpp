@@ -46,10 +46,8 @@ const std::string SourceCodeFolder;
 // C standart 15
 
 int main(int argc, char* argv[]){
-	if(pocket && !exists(root)){
-		std::string cmd = "mkdir " + root;
-		system(cmd.c_str());
-	}
+	if(pocket && !exists(root))
+		createDirectory(root);
 
 	std::vector<std::string> args;
 	for(int i = 1; i < argc; ++i) args.push_back(std::string(argv[i]));
@@ -101,8 +99,7 @@ int main(int argc, char* argv[]){
 
 	if(exists(root) && clear){
 		if(pocket){
-			std::string cmd = "rm -rf " + root;
-			system(cmd.c_str());
+			removeDirectory(root);
 			std::cout << root << " has been removed" << std::endl;
 		}
 		else removeBuildFolder(cd, (find(args, "silent_clear") != -1));
@@ -148,8 +145,7 @@ int main(int argc, char* argv[]){
 		else cmd = "make pocket -C " + SourceCodeFolder;
 		system(cmd.c_str());
 		if(pocket && (SourceCodeFolder != cd)){
-			cmd = "rm pocketbuilder";
-			system(cmd.c_str());
+			removeFile("pocketbuilder");
 			cmd = "cp " + SourceCodeFolder + "/pocketbuilder " + cd;
 			system(cmd.c_str());
 		}

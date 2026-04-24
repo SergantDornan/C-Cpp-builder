@@ -20,8 +20,6 @@ void readSymfile(binFile& newfile, const std::string& symFile){
 }
 
 void createSymfile(binFile& newfile, const std::string& path){
-	std::string cmd = "touch " + path;
-	system(cmd.c_str());
 	std::ofstream out(path);
 	out << newfile.name << std::endl;
 	out << getChangeTime(newfile.name) << std::endl;
@@ -232,10 +230,7 @@ std::string link(const std::string& wd,
 	if(!linking) return "nothing to link";
 
 	std::string objFolder = wd + "/" + SOURCE_DIR + "/" + OBJECTS_DIR;
-	if(exists(parameters[1])){
-		std::string cmd = "rm " + parameters[1];
-		system(cmd.c_str());
-	}
+	if(exists(parameters[1])) removeFile(parameters[1]);
 	auto it = toLink.begin();
 	while(it != toLink.end()){
 		bool erase = false;
@@ -330,10 +325,8 @@ bool updateOutputFiles(const std::vector<std::string>& toCompile,
 
 	
 	const std::string output_configs_folder = wd + "/" + OUTPUT_CONFIGS_FOLDER;
-	if(!exists(output_configs_folder)){
-		std::string cmd = "mkdir " + output_configs_folder;
-		system(cmd.c_str());
-	}
+	if(!exists(output_configs_folder))
+		createDirectory(output_configs_folder);
 	auto configs = getDirs(output_configs_folder);
 
 	// ----- обработка текущего файла
@@ -346,25 +339,13 @@ bool updateOutputFiles(const std::vector<std::string>& toCompile,
 			break;
 		}
 	}
-	if(index == -1){
+	if(index == -1)
 		is_updated = "false";
-		std::string cmd = "touch " + curr_config;
-		system(cmd.c_str());
-	}
 	else{
 		std::ifstream in(curr_config);
 		std::getline(in, is_updated);
 		in.close();
 	}
-	std::cout << "is_updated in file: " << is_updated << std::endl;
-	std::cout << "To compile: ";
-	for(int i = 0; i < toCompile.size(); ++i)
-		std::cout << toCompile[i] << " ";
-	std::cout << std::endl;
-	std::cout << "To link: ";
-	for(int i =0; i < curr_toLink.size(); ++i)
-		std::cout << curr_toLink[i] << ' ';
-	std::cout << std::endl;
 	const std::string objFolder = wd + "/" + SOURCE_DIR + "/" + OBJECTS_DIR; 
 	for(int i = 0; i < curr_toLink.size(); ++i){
 		for(int j = 0; j < toCompile.size(); ++j){
@@ -376,11 +357,6 @@ bool updateOutputFiles(const std::vector<std::string>& toCompile,
 		if(is_updated == "false") break;
 	}
 	bool res = (is_updated == "false");
-	// std::ofstream curr_out(curr_config);
-	// curr_out << is_updated << std::endl;
-	// for(int i = 0; i < curr_parameters.size(); ++i)
-	// 	curr_out << curr_parameters[i] << std::endl;
-	// curr_out.close();
 
 	// true / false (is up to date)
 	// parameters
@@ -412,6 +388,5 @@ bool updateOutputFiles(const std::vector<std::string>& toCompile,
 			out << parameters[i] << std::endl;
 		out.close();
 	}
-	std::cout << "RES: " << int(res) << std::endl; 
 	return res;
 }

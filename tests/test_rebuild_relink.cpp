@@ -327,7 +327,7 @@ TEST_F(BelderFixture, ManyOutputFiles1) {
     EXPECT_BELDER_OK(r2, r2.diagnostic());
 
     runCommand("rm " + tmpDir + "/sum.cpp");
-
+    sleep(2);
     write("sum.cpp",
         "int sum(int a, int b){\n"
         "   return a * b;\n"
@@ -424,6 +424,7 @@ TEST_F(BelderFixture, ManyOutputFiles3) {
     EXPECT_BELDER_OK(r2, r2.diagnostic());
 
     runCommand("rm " + tmpDir + "/mult.cpp");
+    sleep(2);
     write("mult.cpp",
         "int mult(int a, int b){\n"
         "   return a * b * 2;\n"

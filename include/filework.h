@@ -39,4 +39,11 @@ void findFile(std::vector<std::string>&,
 std::string getFullPath(const std::string&,const std::string&);
 void rewriteLine(const std::string&,const std::string&,const std::string&);
 bool checkProgram(const std::string&);
+void removeDirectory(const std::string&);
+void removeDirectories(const std::vector<std::string>&);
+void removeFile(const std::string&);
+void removeFiles(const std::vector<std::string>&);
+void createDirectory(const std::string&);
+void createDirectories(const std::vector<std::string>&);
+void createFile(const std::string&);
 #endif

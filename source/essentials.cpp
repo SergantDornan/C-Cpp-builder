@@ -17,8 +17,7 @@ void removeBuildFolder(const std::string& currDir, bool silent){
 	auto it = lines.begin();
 	while(it != lines.end()){
 		if(split(*it, "*")[0] == currDir){
-			std::string cmd = "rm -rf " + root + "/" + split(*it, "*")[1];
-			system(cmd.c_str());
+			removeDirectory(root + "/" + split(*it, "*")[1]);
 			if(!silent) std::cout << root << "/" << split(*it, "*")[1] << " has been removed" << std::endl; 
 			lines.erase(it);
 			std::ofstream f(configPath);
@@ -44,13 +43,10 @@ std::string createEssentials(const bool reb){
 	}
 	if(!isConfig){
 		for(int i = 1; i < mainDirs.size(); ++i){
-			if(std::filesystem::is_directory(mainDirs[i])){
-				std::string cmd = "rm -rf " + mainDirs[i];
-				system(cmd.c_str()); 
- 			}
+			if(std::filesystem::is_directory(mainDirs[i]))
+				removeDirectory(mainDirs[i]);
 		}
-		std::string cmd = "touch " + root + "/" + CONFIG_FILE;
-		system(cmd.c_str()); 
+		createFile(root + "/" + CONFIG_FILE);
 	}
 	std::string configPath = root + "/" + CONFIG_FILE;
 	std::ifstream config(configPath);
@@ -66,8 +62,7 @@ std::string createEssentials(const bool reb){
 		std::string p = split(*it, "*")[0];
 		if(!exists(p)){
 			projectList.erase(it);
-			std::string cmd = "rm -rf " + root + "/" + split(*it, "*")[1];
-			system(cmd.c_str());
+			removeDirectory(root + "/" + split(*it, "*")[1]);
 			std::ofstream f(configPath);
 			for(int i = 0; i < projectList.size(); ++i)
 				f << projectList[i] << std::endl;
@@ -88,8 +83,7 @@ std::string createEssentials(const bool reb){
 				std::cerr << "Main config file is corrupted and it is probably your fault" << std::endl;
 				std::cerr << "rebuilding all projects and configs" << std::endl;
 				std::cerr << std::endl;
-				std::string cmd = "rm " + configPath;
-				system(cmd.c_str());
+				removeFile(configPath);
 				return createEssentials(false);
 			} 
 			else
@@ -98,22 +92,22 @@ std::string createEssentials(const bool reb){
 		}
 	}
 	if(isDir && reb){
-		std::string cmd = "rm -rf ";
+		std::vector<std::string> dirs_to_remove;
 		auto dirs = getDirs(root + "/" + index);
 		for(int i = 1; i < dirs.size(); ++i){
-			if(getName(dirs[i]) != "config")
-				cmd += (dirs[i] + " ");
+			if(getName(dirs[i]) != CONFIG_FILE && std::filesystem::is_directory(dirs[i]))
+				dirs_to_remove.push_back(dirs[i]);
 		}
-		system(cmd.c_str());
+		removeDirectories(dirs_to_remove);
 	}
 	else if(!isDir){
 		index = std::to_string(projectList.size() + 1);
 		std::ofstream config(configPath,std::ios::app);
 		config << cd << '*' << index << std::endl;
 		config.close();
-		std::string cmd = "mkdir " + root + "/" + index;
-		system(cmd.c_str());
+		createDirectory(root + "/" + index);
 	}
+	
 	std::string folder = root + "/" + index;
 	auto inDir = getDirs(folder);
 	auto inDirNames = inDir;
@@ -129,20 +123,20 @@ std::string createEssentials(const bool reb){
 	if(find(inDirNames, CONFIG_FILE) == -1)
 		rebuild = true;
 	if(rebuild){
-		for(int i = 1; i < inDir.size(); ++i){
-			if(getName(inDir[i]) != "config"){
-				std::string cmd = "rm -rf " + inDir[i];
-				system(cmd.c_str());
-			}
-		}
 
-		for(int i = 0; i < REQ_FOLDERS_SIZE; ++i){
-			std::string cmd = "mkdir " + folder + "/" + reqFolders[i];
-			system(cmd.c_str());
+		std::vector<std::string> dirs_to_remove;
+		for(int i = 1; i < inDir.size(); ++i){
+			if(getName(inDir[i]) != CONFIG_FILE && std::filesystem::is_directory(inDir[i]))
+				dirs_to_remove.push_back(inDir[i]);
 		}
+		removeDirectories(dirs_to_remove);
+
+		std::vector<std::string> dirs_to_create;
+		for(int i = 0; i < REQ_FOLDERS_SIZE; ++i)
+			dirs_to_create.push_back(folder + "/" + reqFolders[i]);
+		createDirectories(dirs_to_create);
+
 		if(!exists(folder + "/" + CONFIG_FILE)){
-			std::string cmd = "touch " + folder + "/" + CONFIG_FILE;
-			system(cmd.c_str());
 			std::ofstream out(folder + "/" + CONFIG_FILE);
 			out << "-1" << std::endl; // 0 main input
 			out << "out" << std::endl; // 1 output name
@@ -169,10 +163,8 @@ std::string createEssentials(const bool reb){
 		auto innerDirNames = innerDir;
 		for(int j = 0; j < innerDirNames.size(); ++j)
 			innerDirNames[j] = getName(innerDirNames[j]);
-		if(i == 0 && find(innerDirNames, DEPS_DIR) == -1){
-			std::string cmd = "mkdir " + subFolder + "/" + DEPS_DIR;
-			system(cmd.c_str());
-		}
+		if(i == 0 && find(innerDirNames, DEPS_DIR) == -1)
+			createDirectory(subFolder + "/" + DEPS_DIR);
 		else if(i == 1){
 			bool rebuildSubFolder = false;
 			for(int j = 0; j < SUB_FOLDERS_SIZE; ++j){
@@ -182,14 +174,14 @@ std::string createEssentials(const bool reb){
 				}
 			}
 			if(rebuildSubFolder){
-				for(int j = 1; j < innerDir.size(); ++j){
-					std::string cmd = "rm -rf " + innerDir[j];
-					system(cmd.c_str());
-				}
-				for(int j = 0; j < SUB_FOLDERS_SIZE; ++j){
-					std::string cmd = "mkdir " + subFolder + "/" + subFolders[j];
-					system(cmd.c_str());
-				}
+				std::vector<std::string> dirs_to_remove;
+				for(int j = 1; j < innerDir.size(); ++j)
+					dirs_to_remove.push_back(innerDir[j]);
+				removeDirectories(dirs_to_remove);
+				std::vector<std::string> dirs_to_create;
+				for(int j = 0; j < SUB_FOLDERS_SIZE; ++j)
+					dirs_to_create.push_back(subFolder + "/" + subFolders[j]);
+				createDirectories(dirs_to_create);
 			}
 		}
 	}

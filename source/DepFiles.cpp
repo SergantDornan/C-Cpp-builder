@@ -169,7 +169,7 @@ bool createDepfiles(const std::string& wd,
 	//Проход по dep файлам:
 
     // Удаление лишних деп файлов и объектников и sym у сурс файлов
-    std::string cmd = "rm";
+    std::vector<std::string> files_to_remove;
 	for(int i = 1; i < dirs.size(); ++i){
 		std::ifstream file(dirs[i]);
 		std::string line;
@@ -179,7 +179,9 @@ bool createDepfiles(const std::string& wd,
 			changeSet = true;
 			std::string objFile = wd + "/" + SOURCE_DIR + "/" + OBJECTS_DIR + "/" + getName(dirs[i]) + ".o";
 			std::string symFile = wd + "/" + SYM_DIR + "/" + getName(dirs[i]) + ".sym";
-            cmd += (" " + dirs[i] + " " + objFile + " " + symFile);
+            files_to_remove.push_back(dirs[i]);
+            files_to_remove.push_back(objFile);
+            files_to_remove.push_back(symFile);
 		}
 	}
 
@@ -192,18 +194,16 @@ bool createDepfiles(const std::string& wd,
 		file.close();
         if(find(allHeaders, line) == -1){
 			changeSet = true;
-			cmd += (" " + dirs[i]);
+            files_to_remove.push_back(dirs[i]);
 		}
 	}
-    if(cmd != "rm") system(cmd.c_str());
+    removeFiles(files_to_remove);
 
 	// Проход по хедерам и сурс файлам
 	for(int i = 0; i < allHeaders.size(); ++i){
 		std::string file = wd + "/" + HEADERS_DIR + "/" + DEPS_DIR + "/" + convertPathToName(allHeaders[i]);
 		if(!exists(file)){
 			changeSet = true;
-			cmd = "touch " + file;
-			system(cmd.c_str());
 			std::ofstream newfile(file);
 			newfile << allHeaders[i] << std::endl;
 			newfile << "-1" << std::endl;
@@ -218,8 +218,6 @@ bool createDepfiles(const std::string& wd,
 		std::string file = bd + "/" + DEPS_DIR + "/" + convertPathToName(allSource[i]);
 		if(!exists(file)){
 			changeSet = true;
-			cmd = "touch " + file;
-			system(cmd.c_str());
 			std::ofstream newfile(file);
 			newfile << allSource[i] << std::endl;
 			newfile << "-1" << std::endl;
@@ -248,17 +246,17 @@ void rebuildForSharedLib(const std::string& n1, const std::string& n2,
         (isSharedLib(n1) && !isSharedLib(n2)))
     {
         std::string dir = wd + "/" + SOURCE_DIR + "/" + DEPS_DIR;
-        std::string cmd = "rm -rf";
+        std::vector<std::string> files_to_remove;
         auto dirs = getDirs(dir);
         for(int i = 1; i < dirs.size(); ++i)
-            cmd += (" " + dirs[i]);
+            files_to_remove.push_back(dirs[i]);
         dirs = getDirs(wd + "/" + SYM_DIR);
         for(int i = 1; i < dirs.size(); ++i)
-            cmd += (" " + dirs[i]);
+            files_to_remove.push_back(dirs[i]);
         dirs = getDirs(wd + "/" + SOURCE_DIR + "/" + OBJECTS_DIR);
         for(int i = 1; i < dirs.size(); ++i)
-            cmd += (" " + dirs[i]);
-        system(cmd.c_str());
+            files_to_remove.push_back(dirs[i]);
+        removeFiles(files_to_remove);
     }
 }
 
@@ -283,7 +281,7 @@ void updateSymfiles(const std::string& wd, const std::vector<std::string>& allLi
 
     auto allObj = getDirs(wd + "/" + SOURCE_DIR + "/" + OBJECTS_DIR);
     auto dirs = getDirs(wd + "/" + SYM_DIR);
-    std::string cmd = "rm";
+    std::vector<std::string> files_to_remove;
     for(int i = 1; i < dirs.size(); ++i){
         std::ifstream file(dirs[i]);
         std::string path, changeTime;
@@ -294,7 +292,7 @@ void updateSymfiles(const std::string& wd, const std::vector<std::string>& allLi
         if(isLib(path)) del |= (find(allLibs, path) == -1);
         else del |= (find(allObj, path) == -1);
         if(!del) del |= (getChangeTime(path) != changeTime);
-        if(del) cmd += (" " + dirs[i]);
+        if(del) files_to_remove.push_back(dirs[i]);
     }
-    if(cmd != "rm") system(cmd.c_str());
+    removeFiles(files_to_remove);
 }

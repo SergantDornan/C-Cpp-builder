@@ -270,3 +270,32 @@ bool checkProgram(const std::string& programName) {
     int result = system(command.c_str());
     return result == 0;
 }
+
+void removeDirectory(const std::string& path) {
+    std::filesystem::remove_all(path);
+}
+void removeDirectories(const std::vector<std::string>& paths){
+    if(paths.size() == 0) return;
+    for(int i = 0; i < paths.size(); ++i)
+        std::filesystem::remove_all(paths[i]);
+}
+void removeFile(const std::string& path) {
+    std::filesystem::remove(path);
+}
+void removeFiles(const std::vector<std::string>& paths){
+    if(paths.size() == 0) return;
+    for(int i = 0; i < paths.size(); ++i)
+        std::filesystem::remove(paths[i]);
+}
+void createDirectory(const std::string& path) {
+    std::filesystem::create_directories(path);
+}
+void createDirectories(const std::vector<std::string>& paths){
+    if(paths.size() == 0) return;
+    for(int i = 0; i < paths.size(); ++i)
+        std::filesystem::create_directories(paths[i]);
+}
+void createFile(const std::string& path) {
+    std::ofstream file(path);
+    file.close();
+}
