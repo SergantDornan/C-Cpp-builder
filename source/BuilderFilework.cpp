@@ -18,12 +18,20 @@ void getAllheaders(std::vector<std::string>& headers,const std::string& path,
     auto dirs = getDirs(path);
     for(int i = 1; i < dirs.size(); ++i){
         if(find(forceUnlink, dirs[i]) != -1) continue;
-        if(((pocket && (dirs[i] == cd + "/builder")) || getName(dirs[i]) == ".git") &&
-            std::filesystem::is_directory(dirs[i])) continue;
+        try {
+            if(((pocket && (dirs[i] == cd + "/builder")) || getName(dirs[i]) == ".git") &&
+                std::filesystem::is_directory(dirs[i])) continue;
+        } catch (const std::filesystem::filesystem_error& e) {
+            continue;
+        }
         if((getExt(dirs[i]) == "h" || getExt(dirs[i]) == "hpp") &&
             find(headers, dirs[i]) == -1) headers.push_back(dirs[i]);
-        if(std::filesystem::is_directory(dirs[i]) && find(fUnIncludeDirs, dirs[i]) == -1)
-            getAllheaders(headers, dirs[i],forceUnlink,fUnIncludeDirs);
+        try {
+            if(std::filesystem::is_directory(dirs[i]) && find(fUnIncludeDirs, dirs[i]) == -1)
+                getAllheaders(headers, dirs[i],forceUnlink,fUnIncludeDirs);
+        } catch (const std::filesystem::filesystem_error& e) {
+            continue;
+        }
     }
     merge_sort(headers);
 }
@@ -33,13 +41,21 @@ void getAllsource(std::vector<std::string>& source, const std::string& path,
     auto dirs = getDirs(path);
     for(int i = 1; i < dirs.size(); ++i){
         if(find(forceUnlink, dirs[i]) != -1) continue;
-        if(((pocket && (dirs[i] == cd + "/builder")) || getName(dirs[i]) == ".git") &&
-            std::filesystem::is_directory(dirs[i])) continue;
+        try {
+            if(((pocket && (dirs[i] == cd + "/builder")) || getName(dirs[i]) == ".git") &&
+                std::filesystem::is_directory(dirs[i])) continue;
+        } catch (const std::filesystem::filesystem_error& e) {
+            continue;
+        }
         std::string ext = getExt(dirs[i]);
         if((ext == "c" || ext == "cpp" || ext == "asm" || ext == "s" || ext == "S") &&
             find(source, dirs[i]) == -1) source.push_back(dirs[i]);
-        if(std::filesystem::is_directory(dirs[i]) && find(fUnIncludeDirs, dirs[i]) == -1)
-            getAllsource(source, dirs[i],forceUnlink,fUnIncludeDirs);
+        try {
+            if(std::filesystem::is_directory(dirs[i]) && find(fUnIncludeDirs, dirs[i]) == -1)
+                getAllsource(source, dirs[i],forceUnlink,fUnIncludeDirs);
+        } catch (const std::filesystem::filesystem_error& e) {
+            continue;
+        }
     }
     merge_sort(source);
 }
@@ -49,16 +65,27 @@ void getAllLibs(std::vector<std::string>& libs, const std::string& path,
     auto dirs = getDirs(path);
     for(int i = 1; i < dirs.size(); ++i){
         if(find(fUnlib, dirs[i]) != -1) continue;
-        if(((pocket && (dirs[i] == cd + "/builder")) || getName(dirs[i]) == ".git") &&
-            std::filesystem::is_directory(dirs[i])) continue;
-        if(std::filesystem::is_directory(dirs[i]) && find(fUnIncludeDirs, dirs[i]) == -1) 
-            getAllLibs(libs, dirs[i], fUnlib,fUnIncludeDirs);
+        
+        try {
+            if(((pocket && (dirs[i] == cd + "/builder")) || getName(dirs[i]) == ".git") &&
+                std::filesystem::is_directory(dirs[i])) continue;
+            if(std::filesystem::is_directory(dirs[i]) && find(fUnIncludeDirs, dirs[i]) == -1) 
+                getAllLibs(libs, dirs[i], fUnlib,fUnIncludeDirs);
+        } catch (const std::filesystem::filesystem_error& e) {
+            continue;
+        }
+        
         std::string longName = getName(dirs[i]);
         if(longName.size() < 4) continue;
         if(std::string(longName.begin(), longName.begin() + 3) != "lib") continue;
         if(getExt(longName) != "a" && getExt(longName) != "so") continue;
-        if(!std::filesystem::is_directory(dirs[i]) && 
-            find(libs, dirs[i]) == -1) libs.push_back(dirs[i]);
+        
+        try {
+            if(!std::filesystem::is_directory(dirs[i]) && 
+                find(libs, dirs[i]) == -1) libs.push_back(dirs[i]);
+        } catch (const std::filesystem::filesystem_error& e) {
+            continue;
+        }
     }
 }
 
