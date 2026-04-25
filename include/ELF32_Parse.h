@@ -66,8 +66,8 @@ typedef struct {
     std::vector<std::string> defSyms;
 } Elf32_parse_result; // copy of a binFile structure
 
-void parse32(Elf32_parse_result&, unsigned char*);
+void parse32(Elf32_parse_result&, unsigned char*, unsigned long elf_size = 0);
 void process_symbol_table32(Elf32_parse_result&, unsigned char*, 
-    Elf32_Shdr*, Elf32_Shdr*, const bool);
+    Elf32_Shdr*, Elf32_Shdr*, const bool, unsigned long elf_size);
 
 #endif

@@ -92,7 +92,6 @@ std::vector<std::string> toLinkList(const std::vector<std::string>& parameters,
 	}
 
 	if(code != 0) return std::vector<std::string>{};
-
 	// ЕЩЕ ОДНА ПРОВЕРКА НА КОНФЛИКТЫ, очень нужная (первую не уберу потому что страшно)
 	for(int i = 0; i < binLink.size()-1; ++i){
 		for(int j = i + 1; j < binLink.size(); ++j){
@@ -146,6 +145,7 @@ void OneThreadObjAnal(const std::string& wd, const std::string& name,binFile& ma
 	// ------------- LIB ANAL -------------
 	for(int i = 0; i < allLibs.size(); ++i){
 		std::string symFile = (wd + "/" + SYM_DIR + "/" + convertPathToName(allLibs[i]) + ".sym");
+		
 		binFile newfile = {allLibs[i]};
 		if(exists(symFile)) readSymfile(newfile, symFile);
 		else{
@@ -214,7 +214,6 @@ std::string link(const std::string& wd,
 	//if(toCompile.size() == 0 && exists(parameters[1]) && !relink)
 	//	return "nothing to link";
 	std::vector<std::string> toLink = toLinkList(parameters,wd,idgaf,allLibs);
-
 	std::vector<std::string> libsToLink, sharedLibDirs;
 	auto iter = toLink.begin();
 	while(iter != toLink.end()){

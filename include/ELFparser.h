@@ -12,6 +12,6 @@ typedef struct {
 } binFile;
 
 void parse_ELF_File(binFile&);
-void parseELF(unsigned char*, binFile&);
+void parseELF(unsigned char*, binFile&, unsigned long elf_size = 0);
 
 #endif
