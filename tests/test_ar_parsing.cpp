@@ -188,3 +188,55 @@ TEST_F(BelderARParsingFixture, RebuildWithStaticArchive) {
     EXPECT_BELDER_OK(result2, "Rebuild after main modification")
         << result2.diagnostic("Should relink with archive without crashing");
 }
+
+TEST_F(BelderARParsingFixture, MultipleLibrariesImportedSymbols) {
+    std::string lib1_dir = tempDir + "/lib1";
+    std::string lib2_dir = tempDir + "/lib2";
+    std::filesystem::create_directory(lib1_dir);
+    std::filesystem::create_directory(lib2_dir);
+
+    std::string lib1_cpp = lib1_dir + "/mylib1.cpp";
+    {
+        std::ofstream out(lib1_cpp);
+        out << "#include <string.h>\n"
+            << "int get_str_len(const char* s) { return strlen(s); }\n";
+    }
+
+    std::string lib2_cpp = lib2_dir + "/mylib2.cpp";
+    {
+        std::ofstream out(lib2_cpp);
+        out << "#include <string.h>\n"
+            << "int check_str(const char* s) { return strlen(s) > 0 ? 1 : 0; }\n";
+    }
+
+    auto compile1 = runCommandInDir(
+        std::string(BELDER_BINARY) + " mylib1.cpp -o mylib1.a",
+        lib1_dir
+    );
+    auto compile2 = runCommandInDir(
+        std::string(BELDER_BINARY) + " mylib2.cpp -o mylib2.a",
+        lib2_dir
+    );
+    ASSERT_BELDER_OK(compile1, "Compile lib1 with strlen import");
+    ASSERT_BELDER_OK(compile2, "Compile lib2 with strlen import");
+
+    std::string main_cpp = tempDir + "/main.cpp";
+    {
+        std::ofstream out(main_cpp);
+        out << "extern int get_str_len(const char*);\n"
+            << "extern int check_str(const char*);\n"
+            << "#include <stdio.h>\n"
+            << "int main() {\n"
+            << "  printf(\"%d %d\\\\n\", get_str_len(\"test\"), check_str(\"abc\"));\n"
+            << "  return 0;\n"
+            << "}\n";
+    }
+
+    auto result = runCommandInDir(
+        std::string(BELDER_BINARY) + " main.cpp --link-force " + lib1_dir + "/mylib1.a " + lib2_dir + "/mylib2.a -o test_exe",
+        tempDir
+    );
+
+    EXPECT_BELDER_OK(result, "Link multiple libraries with imported strlen")
+        << result.diagnostic("Multiple libraries importing strlen should NOT cause conflict - strlen is imported, not defined");
+}

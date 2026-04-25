@@ -70,14 +70,13 @@ void process_symbol_table32(Elf32_parse_result& result, unsigned char* elf, Elf3
         unsigned char symbol_bind = symbol_info >> 4;
         uint16_t symbol_section_index = symbol->st_shndx;
         
-        if((symbol_type == 1 || symbol_type == 2) && symbol_bind != 2 && symbol_bind != 0){
-            result.defSyms.push_back(symbol_name);
+        if(symbol_section_index == 0){
+            if(symbol_bind == 1 || symbol_bind == 2){
+                result.callSyms.push_back(symbol_name);
+            }
         }
-
-        if(symbol_type == 0 && symbol_section_index == 0 
-            && (symbol_bind == 1 || symbol_bind == 2))
-        {
-            result.callSyms.push_back(symbol_name);
+        else if((symbol_type == 1 || symbol_type == 2) && symbol_bind != 0){
+            result.defSyms.push_back(symbol_name);
         }
     }
 }

@@ -93,33 +93,26 @@ std::vector<std::string> toLinkList(const std::vector<std::string>& parameters,
 
 	if(code != 0) return std::vector<std::string>{};
 	// ЕЩЕ ОДНА ПРОВЕРКА НА КОНФЛИКТЫ, очень нужная (первую не уберу потому что страшно)
-	for(int i = 0; i < binLink.size()-1; ++i){
-		for(int j = i + 1; j < binLink.size(); ++j){
-			for(int h = 0; h < binLink[j].defSyms.size(); ++h){
-				if(find(binLink[i].defSyms, binLink[j].defSyms[h]) != -1 && !idgaf){
-					std::cerr << "=================== ERROR ===================" << std::endl;
-					std::cerr << "multiple definition of symbol: " << std::endl;
-					std::cerr << binLink[j].defSyms[h] << std::endl;
-					std::cerr << std::endl;
-					std::ifstream file(wd + "/" + SOURCE_DIR + "/" + DEPS_DIR + "/" + getNameNoExt(binLink[i].name));
-					std::string line;
-					std::getline(file, line);
-					file.close();
-					std::cerr << "First definition in file: " << getName(line) <<  std::endl;
-					std::ifstream file1(wd + "/" + SOURCE_DIR + "/" + DEPS_DIR + "/" + getNameNoExt(binLink[j].name));
-					std::getline(file1, line);
-					file1.close();
-					std::cerr << "Second definition in file: " << getName(line) << std::endl;
-					std::cerr << std::endl;
-					std::cerr << "You can choose not to link files forcibly by using the flag: --no-link-force [filename]" << std::endl;
-					std::cerr << "Or you can run builder with --idgaf flag to ignore this error" << std::endl;
-					std::cerr << std::endl;
-					std::cerr << std::endl;
-					return std::vector<std::string>{};
-				}
-			}
-		}
-	}
+	// for(int i = 0; i < binLink.size()-1; ++i){
+	// 	for(int j = i + 1; j < binLink.size(); ++j){
+	// 		for(int h = 0; h < binLink[j].defSyms.size(); ++h){
+	// 			if(find(binLink[i].defSyms, binLink[j].defSyms[h]) != -1 && !idgaf){
+	// 				std::cerr << "=================== ERROR ===================" << std::endl;
+	// 				std::cerr << "multiple definition of symbol: " << std::endl;
+	// 				std::cerr << binLink[j].defSyms[h] << std::endl;
+	// 				std::cerr << std::endl;
+	// 				std::cerr << "First definition in file: " << getName(binLink[i].name) <<  std::endl;
+	// 				std::cerr << "Second definition in file: " << getName(binLink[j].name) << std::endl;
+	// 				std::cerr << std::endl;
+	// 				std::cerr << "You can choose not to link files forcibly by using the flag: --no-link-force [filename]" << std::endl;
+	// 				std::cerr << "Or you can run builder with --idgaf flag to ignore this error" << std::endl;
+	// 				std::cerr << std::endl;
+	// 				std::cerr << std::endl;
+	// 				return std::vector<std::string>{};
+	// 			}
+	// 		}
+	// 	}
+	// }
 	return toLink;
 }
 void OneThreadObjAnal(const std::string& wd, const std::string& name,binFile& mainObj,
@@ -174,15 +167,8 @@ int findLinks(std::vector<std::string>& toLink, const std::vector<binFile>& file
 					std::cerr << "multiple definition of symbol: " << std::endl;
 					std::cerr << file.callSyms[i] << std::endl;
 					std::cerr << std::endl;
-					std::ifstream file0(wd + "/" + SOURCE_DIR + "/" + DEPS_DIR + "/" + getNameNoExt(syms[file.callSyms[i]]));
-					std::string line;
-					std::getline(file0, line);
-					file0.close();
-					std::cerr << "First definition in file: " << getName(line) << std::endl;
-					std::ifstream file1(wd + "/" + SOURCE_DIR + "/" + DEPS_DIR + "/" + getNameNoExt(filesInfo[j].name));
-					std::getline(file1, line);
-					file1.close();
-					std::cerr << "Second definition in file: " << getName(line) << std::endl;
+					std::cerr << "First definition in file: " << getName(syms[file.callSyms[i]]) << std::endl;
+					std::cerr << "Second definition in file: " << getName(filesInfo[j].name) << std::endl;
 					std::cerr << std::endl;
 					std::cerr << "You can choose not to link files forcibly by using the flag: --no-link-force [filename]" << std::endl;
 					std::cerr << "Or you can run builder with --idgaf flag to ignore this error" << std::endl;
@@ -193,6 +179,7 @@ int findLinks(std::vector<std::string>& toLink, const std::vector<binFile>& file
 				// Конфликтов нет, либо мы их игнорируем:
 				if(find(toLink, filesInfo[j].name) == -1){
 					toLink.push_back(filesInfo[j].name);
+					std::cout << "Adding file: " << filesInfo[j].name << std::endl;
 					binLink.push_back(filesInfo[j]);
 					syms[file.callSyms[i]] = filesInfo[j].name;
 					findLinks(toLink, filesInfo, filesInfo[j], syms, idgaf, binLink,wd);

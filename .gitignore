@@ -3,3 +3,5 @@ belder
 pocketbuilder
 builder
 .github/*
+installer
+tests/test_runner
