@@ -1,4 +1,5 @@
 #include <filework.h>
+#include "Process.h"
 std::string getFullPath(const std::string& cd_, const std::string& relpath_)
 {
     std::string cd = cd_;
@@ -273,9 +274,8 @@ void rewriteLine(const std::string& path,
     out.close();
 }
 bool checkProgram(const std::string& programName) {
-    std::string command = "which " + programName + " > /dev/null 2>&1";
-    int result = system(command.c_str());
-    return result == 0;
+    // Запускаем "which <programName>" без shell, вывод - в /dev/null.
+    return runProcessQuiet({"which", programName}) == 0;
 }
 
 void removeDirectory(const std::string& path) {

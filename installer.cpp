@@ -1,6 +1,7 @@
 #include "uninstall.h"
 #include "BuilderFilework.h"
 #include "alias.h"
+#include "Process.h"
 #include <thread>
 
 std::string standartOutput;
@@ -10,8 +11,7 @@ int main(int argc, char* argv[]) {
     std::string standartOutput = "OUTPUT=" + root + "/builder";
     bool pocket = (argc >= 2 && std::string(argv[1]) == "pocket");
     if(pocket && exists("./pocketbuilder")){
-        std::string cmd = "rm ./pocketbuilder";
-        system(cmd.c_str());
+        runProcess({"rm", "./pocketbuilder"});
     }
     if(!checkProgram("gcc")){
         std::cout << "=============== ERROR ===============" << std::endl;
@@ -32,7 +32,6 @@ int main(int argc, char* argv[]) {
         std::cout << "This is fatal error, install make before installation" << std::endl;
         return -1;
     }
-    std::string cmd;
     std::string output = (pocket) ? (pocketOutput) : (standartOutput);
 
     rewriteLine(cd + "/source/main.cpp",
@@ -49,8 +48,7 @@ int main(int argc, char* argv[]) {
         addAlias("belder", root + "/builder");
         addAlias("sudo_belder", "sudo " + root + "/builder");
     }
-    cmd = "make -C " + cd + " -j " + std::to_string(numThreads);
-    int code = system(cmd.c_str());
+    int code = runProcess({"make", "-C", cd, "-j", std::to_string(numThreads)});
     if(exists(root) && !pocket && code == 0){
         std::cout << "====================== ERROR ======================" << std::endl;
         std::cout << "Folder: " << root << " already exists" << std::endl;
@@ -59,12 +57,10 @@ int main(int argc, char* argv[]) {
         return -1;
     }
     if(!pocket && code == 0){
-        cmd = "mkdir " + root;
-        system(cmd.c_str());
+        runProcess({"mkdir", root});
     }
     if(code == 0){
-        cmd = "make link -C " + cd + " -j " + std::to_string(numThreads);
-        system(cmd.c_str());
+        runProcess({"make", "link", "-C", cd, "-j", std::to_string(numThreads)});
     }
     rewriteLine(cd + "/source/main.cpp",
         std::string("const std::string SourceCodeFolder = \"" + cd + "\";"),

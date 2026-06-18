@@ -1,5 +1,6 @@
 #include "Compile.h"
 #include "ConfigIndex.h"
+#include "Process.h"
 
 std::mutex mtx;
 
@@ -73,41 +74,45 @@ int compileFile(const std::string& path,
     std::string compiler;
     int code = -1;
     std::string objFile = bd + "/" + OBJECTS_DIR + "/" + convertPathToName(depfile[0]) + ".o";
-    std::string include = "";
     std::vector<std::string> incDirs;
     if(depfile[4] != "-1") incDirs = split(depfile[4]);
-    for(int i = 0; i < incDirs.size(); ++i) include += std::string("-I" + incDirs[i] + " ");
     std::vector<std::string> compilers = split(parameters[CFG_COMPILERS]);
     std::string ext = getExt(depfile[0]);
     std::string standart = "-1";
     if(ext == "c"){
-        if(compilers[0] == "default") compiler = "gcc ";
-        else compiler = (compilers[0] + " ");
+        if(compilers[0] == "default") compiler = "gcc";
+        else compiler = compilers[0];
         standart = parameters[CFG_C_STANDARD];
     }
     else{
-        if(compilers[1] == "default") compiler = "g++ ";
-        else compiler = (compilers[1] + " ");
+        if(compilers[1] == "default") compiler = "g++";
+        else compiler = compilers[1];
         standart = parameters[CFG_CXX_STANDARD];
     }
-    std::string cmd = "";
 
-    // Компиляция сразу в объектник
-    
-    if(getExt(depfile[0]) == "cpp" || getExt(depfile[0]) == "c") cmd = compiler;
-    else cmd = compiler + "-x assembler-with-cpp ";
-    if(linkType == 2) cmd += "-fPIC ";
+    // Компиляция сразу в объектник - собираем argv без shell (см. Process.h)
+    std::vector<std::string> argv;
+    appendArgs(argv, compiler);
+    if(!(ext == "cpp" || ext == "c")){
+        argv.push_back("-x");
+        argv.push_back("assembler-with-cpp");
+    }
+    if(linkType == 2) argv.push_back("-fPIC");
     for(int i = CFG_OPT; i <= CFG_COMPILE_FLAGS; ++i) // разные флаги + флаги конкретно компилятору
-        if(parameters[i] != "-1") cmd += (parameters[i] + " ");
-    if(standart != "-1") cmd += (standart + " ");
-    if(parameters[CFG_GENERAL_FLAGS] != "-1") cmd += (parameters[CFG_GENERAL_FLAGS] + " "); // general flags
-    cmd += (include + depfile[0] + " -c -o " + objFile);
+        if(parameters[i] != "-1") appendArgs(argv, parameters[i]);
+    if(standart != "-1") appendArgs(argv, standart);
+    if(parameters[CFG_GENERAL_FLAGS] != "-1") appendArgs(argv, parameters[CFG_GENERAL_FLAGS]); // general flags
+    for(int i = 0; i < incDirs.size(); ++i) argv.push_back("-I" + incDirs[i]);
+    argv.push_back(depfile[0]);
+    argv.push_back("-c");
+    argv.push_back("-o");
+    argv.push_back(objFile);
     if(log) {
         mtx.lock();
-        std::cout << cmd << '\n' << std::endl;
+        std::cout << joinArgs(argv) << '\n' << std::endl;
         mtx.unlock();
     }
-    code = system(cmd.c_str());
+    code = runProcess(argv);
 
     // Обновление depFile
     std::ofstream out(path);

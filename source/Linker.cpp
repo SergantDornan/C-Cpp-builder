@@ -1,5 +1,6 @@
 #include "Linker.h"
 #include "ConfigIndex.h"
+#include "Process.h"
 
 // Возвращает true, если .sym-кэш прочитан успешно. На любом признаке порчи
 // (файл не открылся, оборван, нечисловые счётчики) возвращает false - вызывающий
@@ -263,30 +264,30 @@ std::string link(const std::string& wd,
 		std::string compiler;
 		std::vector<std::string> compilers = split(parameters[CFG_COMPILERS]);
 		if(getExt(parameters[CFG_ENTRY]) == "cpp"){
-			if(compilers[1] == "default") compiler = "g++ ";
-			else compiler = (compilers[1] + " ");
+			if(compilers[1] == "default") compiler = "g++";
+			else compiler = compilers[1];
 		}
         else{
-        	if(compilers[0] == "default") compiler = "gcc ";
-			else compiler = (compilers[0] + " ");
+        	if(compilers[0] == "default") compiler = "gcc";
+			else compiler = compilers[0];
 		}
-		std::string cmd = compiler;
-		if(linkType == 2) cmd += "-shared ";
-		for(int i = 0; i < toLink.size(); ++i) cmd += (toLink[i] + " ");
-		for(int i = CFG_LINK_FLAGS; i <= CFG_GENERAL_FLAGS; ++i){
-			if(parameters[i] != "-1")
-				cmd += (parameters[i] + " ");
-		}
-		for(int i = 0; i < libsToLink.size(); ++i) cmd += (libsToLink[i] + " ");
-		cmd += (" -o " + parameters[CFG_OUTPUT]);
-		if(log) std::cout << cmd << std::endl;
-		code = system(cmd.c_str());
+		std::vector<std::string> argv;
+		appendArgs(argv, compiler);
+		if(linkType == 2) argv.push_back("-shared");
+		for(int i = 0; i < toLink.size(); ++i) argv.push_back(toLink[i]);
+		for(int i = CFG_LINK_FLAGS; i <= CFG_GENERAL_FLAGS; ++i)
+			if(parameters[i] != "-1") appendArgs(argv, parameters[i]);
+		for(int i = 0; i < libsToLink.size(); ++i) argv.push_back(libsToLink[i]);
+		argv.push_back("-o");
+		argv.push_back(parameters[CFG_OUTPUT]);
+		if(log) std::cout << joinArgs(argv) << std::endl;
+		code = runProcess(argv);
 	}
 	else if(linkType == 1){ // статическая библиотека
-		std::string cmd = "ar rcs " + parameters[CFG_OUTPUT] + " ";
-		for(int i = 0; i < toLink.size(); ++i) cmd += (toLink[i] + " ");
-		if(log) std::cout << cmd << std::endl;
-		code = system(cmd.c_str());
+		std::vector<std::string> argv = {"ar", "rcs", parameters[CFG_OUTPUT]};
+		for(int i = 0; i < toLink.size(); ++i) argv.push_back(toLink[i]);
+		if(log) std::cout << joinArgs(argv) << std::endl;
+		code = runProcess(argv);
 	}
 	else{
 		std::cerr << "===================== ERROR =====================" << std::endl;
@@ -311,7 +312,9 @@ std::string link(const std::string& wd,
 			std::cout << std::endl;
 			std::cout << cmd << std::endl;
 		}
-		system(cmd.c_str());
+		// Раньше тут был system("export LD_LIBRARY_PATH=..."), но export в
+		// подоболочке, которая сразу завершается, ничего не менял (no-op);
+		// к тому же блок недостижим (sharedLibDirs всегда пуст). Без exec.
 	}
 	return "success";
 }

@@ -15,7 +15,7 @@ CFLAGS=$(GENERALFLAGS) $(OPT) $(DEPFLAGS)
 CFILES=$(foreach D, $(SOURCEDIR), $(wildcard $(D)/*.cpp))
 OBJECTS=$(patsubst $(SOURCEDIR)%.cpp, $(deps)%.o, $(CFILES))
 DEPFILES= $(patsubst $(SOURCEDIR)%.cpp, $(deps)%.d, $(CFILES)) $(deps)/installer.d $(deps)/tests.d
-INSTALLOBJECTS= $(deps)/installer.o $(deps)/alias.o $(deps)/BuilderFilework.o $(deps)/uninstall.o $(deps)/filework.o $(deps)/algs.o $(deps)/Mapping.o
+INSTALLOBJECTS= $(deps)/installer.o $(deps)/alias.o $(deps)/BuilderFilework.o $(deps)/uninstall.o $(deps)/filework.o $(deps)/algs.o $(deps)/Mapping.o $(deps)/Process.o
 
 BELDERBINARY = ./belder
 TESTSDIR     = ./tests

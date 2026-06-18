@@ -7,6 +7,7 @@
 #include "StatusCheck.h"
 #include "Mapping.h"
 #include "ConfigIndex.h"
+#include "Process.h"
 
 // Следующая строка заполняется инсталлятором, не менять ее
 const std::string SourceCodeFolder;
@@ -139,23 +140,20 @@ int main(int argc, char* argv[]){
 			std::cerr << std::endl;
 			return 1;
 		}
-		std::string cmd;
 		int checkCompileCode = 0;
-		cmd = "make -C " + SourceCodeFolder;
-		if(args.size() > 2 && args[1] == "-j")
-			cmd += (" " + args[1] + " " + args[2]);
-		else
-			cmd += " -j 8";
-		checkCompileCode |= system(cmd.c_str());
+		std::vector<std::string> makeArgs = {"make", "-C", SourceCodeFolder, "-j"};
+		if(args.size() > 2 && args[1] == "-j") makeArgs.push_back(args[2]);
+		else makeArgs.push_back("8");
+		checkCompileCode |= runProcess(makeArgs);
 		if(checkCompileCode != 0) return 1;
 		if(!pocket) uninstall();
-		if(!pocket) cmd = "make install -C " + SourceCodeFolder;
-		else cmd = "make pocket -C " + SourceCodeFolder;
-		system(cmd.c_str());
+		std::vector<std::string> installArgs;
+		if(!pocket) installArgs = {"make", "install", "-C", SourceCodeFolder};
+		else installArgs = {"make", "pocket", "-C", SourceCodeFolder};
+		runProcess(installArgs);
 		if(pocket && (SourceCodeFolder != cd)){
 			removeFile("pocketbuilder");
-			cmd = "cp " + SourceCodeFolder + "/pocketbuilder " + cd;
-			system(cmd.c_str());
+			runProcess({"cp", SourceCodeFolder + "/pocketbuilder", cd});
 		}
 		return 0;
 	}
@@ -262,8 +260,8 @@ int main(int argc, char* argv[]){
     	std::cout << "belder: compilation error" << std::endl;
     if(run && exists(parameters[CFG_OUTPUT]) && linkmsg != "compilation error"){
 		if(linkType == 0){
-			std::string cmd = parameters[CFG_OUTPUT];
-			system(cmd.c_str());
+			// Имя вывода - абсолютный путь (содержит '/'), запускается напрямую.
+			runProcess({parameters[CFG_OUTPUT]});
 		}
 		else{
 			std::cerr << "================= ERROR =================" << std::endl;
