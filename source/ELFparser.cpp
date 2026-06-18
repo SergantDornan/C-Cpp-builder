@@ -33,11 +33,20 @@ void parseELF(unsigned char* elf, binFile& newfile, unsigned long elf_size){
 
 void parse_ELF_File(binFile& newfile){
 
-	std::ifstream file(newfile.name, std::ios::binary);
-    unsigned long size = getFileSize(newfile.name);
-    unsigned char* elf = new unsigned char[size];
-    file.read((char*)elf, size);
+    long fileSize = getFileSize(newfile.name);
+    // Минимум для ELF-заголовка (32-бит). Так же отсекает случай, когда
+    // getFileSize вернул -1 (файл не открылся): отрицательное < 52.
+    if(fileSize < 52)
+        return;
+    unsigned long size = (unsigned long)fileSize;
+
+    std::ifstream file(newfile.name, std::ios::binary);
+    if(!file.is_open())
+        return;
+    std::vector<unsigned char> buffer(size); // RAII: освобождается на любом выходе
+    file.read((char*)buffer.data(), size);
     file.close();
+    unsigned char* elf = buffer.data();
     bool isElf = (uint8_t(*elf) == 127 && uint8_t(*(elf+1)) == 'E' && uint8_t(*(elf+2)) == 'L' && uint8_t(*(elf+3)) == 'F');
     if(!isElf){
         // std::cerr << "==================================== ERROR ====================================" << std::endl;
@@ -49,5 +58,4 @@ void parse_ELF_File(binFile& newfile){
         return;
     }
     parseELF(elf, newfile, size);
-    delete[] elf;
 }

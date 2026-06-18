@@ -1,4 +1,5 @@
 #include "Compile.h"
+#include "ConfigIndex.h"
 
 std::mutex mtx;
 
@@ -76,18 +77,18 @@ int compileFile(const std::string& path,
     std::vector<std::string> incDirs;
     if(depfile[4] != "-1") incDirs = split(depfile[4]);
     for(int i = 0; i < incDirs.size(); ++i) include += std::string("-I" + incDirs[i] + " ");
-    std::vector<std::string> compilers = split(parameters[5]); 
+    std::vector<std::string> compilers = split(parameters[CFG_COMPILERS]);
     std::string ext = getExt(depfile[0]);
     std::string standart = "-1";
     if(ext == "c"){
         if(compilers[0] == "default") compiler = "gcc ";
         else compiler = (compilers[0] + " ");
-        standart = parameters[15];
+        standart = parameters[CFG_C_STANDARD];
     }
     else{
         if(compilers[1] == "default") compiler = "g++ ";
         else compiler = (compilers[1] + " ");
-        standart = parameters[7];
+        standart = parameters[CFG_CXX_STANDARD];
     }
     std::string cmd = "";
 
@@ -96,10 +97,10 @@ int compileFile(const std::string& path,
     if(getExt(depfile[0]) == "cpp" || getExt(depfile[0]) == "c") cmd = compiler;
     else cmd = compiler + "-x assembler-with-cpp ";
     if(linkType == 2) cmd += "-fPIC ";
-    for(int i = 8; i <= 10; ++i) // разные флаги + флаги конкретно компилятору
-        if(parameters[i] != "-1") cmd += (parameters[i] + " "); 
+    for(int i = CFG_OPT; i <= CFG_COMPILE_FLAGS; ++i) // разные флаги + флаги конкретно компилятору
+        if(parameters[i] != "-1") cmd += (parameters[i] + " ");
     if(standart != "-1") cmd += (standart + " ");
-    if(parameters[12] != "-1") cmd += (parameters[12] + " "); // general flags
+    if(parameters[CFG_GENERAL_FLAGS] != "-1") cmd += (parameters[CFG_GENERAL_FLAGS] + " "); // general flags
     cmd += (include + depfile[0] + " -c -o " + objFile);
     if(log) {
         mtx.lock();

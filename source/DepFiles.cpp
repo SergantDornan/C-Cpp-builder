@@ -114,9 +114,11 @@ void UpdateDependencies(const std::vector<std::string>& HDdirs,
                 else
                     pathToDepfile = bd + "/" + DEPS_DIR + "/" + convertPathToName(changedFiles[i]);
                 if(changes[j].second) data[changes[j].first][1].push_back(pathToDepfile);
-                else data[changes[j].first][1].erase(
-                    std::find(data[changes[j].first][1].begin(),
-                    data[changes[j].first][1].end(), pathToDepfile));
+                else{
+                    auto& depList = data[changes[j].first][1];
+                    auto found = std::find(depList.begin(), depList.end(), pathToDepfile);
+                    if(found != depList.end()) depList.erase(found); // erase(end()) - UB, проверяем
+                }
             }
         }
     }

@@ -1,22 +1,30 @@
 #include "Linker.h"
+#include "ConfigIndex.h"
 
-void readSymfile(binFile& newfile, const std::string& symFile){
+// Возвращает true, если .sym-кэш прочитан успешно. На любом признаке порчи
+// (файл не открылся, оборван, нечисловые счётчики) возвращает false - вызывающий
+// код тогда перечитает символы из самого бинарника и перезапишет кэш.
+bool readSymfile(binFile& newfile, const std::string& symFile){
 	std::ifstream file(symFile);
+	if(!file.is_open()) return false;
 	unsigned long callNum = 0, defNum = 0;
 	std::string line;
-	for(int i = 0; i < 3; ++i) std::getline(file, line);
-	callNum = std::stoul(line);
-	std::getline(file, line);
-	defNum = std::stoul(line);
+	for(int i = 0; i < 3; ++i)
+		if(!std::getline(file, line)) return false;
+	try{ callNum = std::stoul(line); }
+	catch(const std::exception&){ return false; }
+	if(!std::getline(file, line)) return false;
+	try{ defNum = std::stoul(line); }
+	catch(const std::exception&){ return false; }
 	for(unsigned long j = 0; j < callNum; ++j){
-		std::getline(file, line);
+		if(!std::getline(file, line)) return false;
 		newfile.callSyms.push_back(line);
 	}
 	for(unsigned long j = 0; j < defNum; ++j){
-		std::getline(file, line);
+		if(!std::getline(file, line)) return false;
 		newfile.defSyms.push_back(line);
 	}
-	file.close();
+	return true;
 }
 
 void createSymfile(binFile& newfile, const std::string& path){
@@ -41,11 +49,11 @@ std::vector<std::string> toLinkList(const std::vector<std::string>& parameters,
 	std::vector<std::string> toLink;
 	std::vector<binFile> filesInfo;
 	binFile mainObj = {"main"};
-	toLink.push_back(objFolder + "/" + convertPathToName(parameters[0]) + ".o");
+	toLink.push_back(objFolder + "/" + convertPathToName(parameters[CFG_ENTRY]) + ".o");
 	std::vector<std::string> forceLinkLibs, fLink;
-	if(parameters[2] != "-1") forceLinkLibs = split(parameters[2]);
-	if(parameters[3] != "-1") fLink = split(parameters[3]);
-    OneThreadObjAnal(wd,(objFolder + "/" + convertPathToName(parameters[0]) + ".o"),
+	if(parameters[CFG_FORCE_LINK_LIBS] != "-1") forceLinkLibs = split(parameters[CFG_FORCE_LINK_LIBS]);
+	if(parameters[CFG_FORCE_LINK] != "-1") fLink = split(parameters[CFG_FORCE_LINK]);
+    OneThreadObjAnal(wd,(objFolder + "/" + convertPathToName(parameters[CFG_ENTRY]) + ".o"),
     	mainObj,allObj,allLibs,filesInfo);
     unsigned long x = 0;
     std::map<std::string, std::string> syms;
@@ -123,8 +131,10 @@ void OneThreadObjAnal(const std::string& wd, const std::string& name,binFile& ma
 	for(int i = 0; i < dirs.size(); ++i){
 		std::string symFile = (wd + "/" + SYM_DIR + "/" + getNameNoExt(dirs[i]) + ".sym");
 		binFile newfile = {dirs[i]};
-		if(exists(symFile)) readSymfile(newfile, symFile);
-		else{
+		bool ok = exists(symFile) && readSymfile(newfile, symFile);
+		if(!ok){ // кэша нет или он повреждён - перечитываем из объектника
+			newfile.callSyms.clear();
+			newfile.defSyms.clear();
 			parse_ELF_File(newfile);
 			createSymfile(newfile, symFile);
 		}
@@ -140,8 +150,10 @@ void OneThreadObjAnal(const std::string& wd, const std::string& name,binFile& ma
 		std::string symFile = (wd + "/" + SYM_DIR + "/" + convertPathToName(allLibs[i]) + ".sym");
 		
 		binFile newfile = {allLibs[i]};
-		if(exists(symFile)) readSymfile(newfile, symFile);
-		else{
+		bool ok = exists(symFile) && readSymfile(newfile, symFile);
+		if(!ok){ // кэша нет или он повреждён - перечитываем из библиотеки
+			newfile.callSyms.clear();
+			newfile.defSyms.clear();
 			std::string ext = getExt(allLibs[i]);
 			if(ext == "so") parse_ELF_File(newfile);
 			else if(ext == "a") parse_ARLIB(newfile);
@@ -198,7 +210,7 @@ std::string link(const std::string& wd,
 {
 	if(toCompile.size() != 0 && toCompile[0] == "-1")
 		return "compilation error";
-	//if(toCompile.size() == 0 && exists(parameters[1]) && !relink)
+	//if(toCompile.size() == 0 && exists(parameters[CFG_OUTPUT]) && !relink)
 	//	return "nothing to link";
 	std::vector<std::string> toLink = toLinkList(parameters,wd,idgaf,allLibs);
 	std::vector<std::string> libsToLink, sharedLibDirs;
@@ -216,7 +228,7 @@ std::string link(const std::string& wd,
 	if(!linking) return "nothing to link";
 
 	std::string objFolder = wd + "/" + SOURCE_DIR + "/" + OBJECTS_DIR;
-	if(exists(parameters[1])) removeFile(parameters[1]);
+	if(exists(parameters[CFG_OUTPUT])) removeFile(parameters[CFG_OUTPUT]);
 	auto it = toLink.begin();
 	while(it != toLink.end()){
 		bool erase = false;
@@ -249,8 +261,8 @@ std::string link(const std::string& wd,
 	int code = -1;
 	if(linkType == 0 || linkType == 2){
 		std::string compiler;
-		std::vector<std::string> compilers = split(parameters[5]);
-		if(getExt(parameters[0]) == "cpp"){
+		std::vector<std::string> compilers = split(parameters[CFG_COMPILERS]);
+		if(getExt(parameters[CFG_ENTRY]) == "cpp"){
 			if(compilers[1] == "default") compiler = "g++ ";
 			else compiler = (compilers[1] + " ");
 		}
@@ -261,17 +273,17 @@ std::string link(const std::string& wd,
 		std::string cmd = compiler;
 		if(linkType == 2) cmd += "-shared ";
 		for(int i = 0; i < toLink.size(); ++i) cmd += (toLink[i] + " ");
-		for(int i = 11; i <= 12; ++i){
+		for(int i = CFG_LINK_FLAGS; i <= CFG_GENERAL_FLAGS; ++i){
 			if(parameters[i] != "-1")
 				cmd += (parameters[i] + " ");
 		}
 		for(int i = 0; i < libsToLink.size(); ++i) cmd += (libsToLink[i] + " ");
-		cmd += (" -o " + parameters[1]);
+		cmd += (" -o " + parameters[CFG_OUTPUT]);
 		if(log) std::cout << cmd << std::endl;
 		code = system(cmd.c_str());
 	}
 	else if(linkType == 1){ // статическая библиотека
-		std::string cmd = "ar rcs " + parameters[1] + " ";
+		std::string cmd = "ar rcs " + parameters[CFG_OUTPUT] + " ";
 		for(int i = 0; i < toLink.size(); ++i) cmd += (toLink[i] + " ");
 		if(log) std::cout << cmd << std::endl;
 		code = system(cmd.c_str());
@@ -284,7 +296,7 @@ std::string link(const std::string& wd,
 		return "nothing to link";
 	}
 
-	const std::string curr_config = wd + "/" + OUTPUT_CONFIGS_FOLDER + "/" + convertPathToName(parameters[0]) + "_" + convertPathToName(parameters[1]);
+	const std::string curr_config = wd + "/" + OUTPUT_CONFIGS_FOLDER + "/" + convertPathToName(parameters[CFG_ENTRY]) + "_" + convertPathToName(parameters[CFG_OUTPUT]);
 	std::ofstream out(curr_config);
 	out << ((code == 0) ? "true" : "false") << std::endl;
 	for(int i = 0; i < parameters.size(); ++i)
@@ -317,7 +329,7 @@ bool updateOutputFiles(const std::vector<std::string>& toCompile,
 
 	// ----- обработка текущего файла
 	std::string is_updated;
-	const std::string curr_config = output_configs_folder + "/" + convertPathToName(curr_parameters[0]) + "_" + convertPathToName(curr_parameters[1]);
+	const std::string curr_config = output_configs_folder + "/" + convertPathToName(curr_parameters[CFG_ENTRY]) + "_" + convertPathToName(curr_parameters[CFG_OUTPUT]);
 	int index = -1;
 	for(int i = 1; i < configs.size(); ++i){
 		if(configs[i] == curr_config){
@@ -356,6 +368,10 @@ bool updateOutputFiles(const std::vector<std::string>& toCompile,
 		std::string line;
 		while(std::getline(in,line)) parameters.push_back(line);
 		in.close();
+
+		// Повреждённый (например, недописанный) output-config пропускаем,
+		// иначе toLinkList обратится к parameters[] за границей вектора.
+		if(parameters.size() < CFG_COUNT) continue;
 
 		std::vector<std::string> toLink = toLinkList(parameters, wd, true, std::vector<std::string>{});
 		for(int i = 0; i < toLink.size(); ++i){

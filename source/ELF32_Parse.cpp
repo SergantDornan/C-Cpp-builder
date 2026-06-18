@@ -8,10 +8,13 @@ void parse32(Elf32_parse_result& result, unsigned char* elf, unsigned long elf_s
     const bool correctEndian = (checkSystemEndian() == elfHeader -> e_ident[5]);
     if(!correctEndian) swapBytesElfHeader(elfHeader);
     
-    if(elfHeader->e_shoff + elfHeader->e_shnum * sizeof(Elf32_Shdr) > elf_size){
+    // Проверка без переполнения: сначала отсекаем e_shoff > elf_size,
+    // затем сравниваем количество секций с тем, сколько реально помещается.
+    if(elfHeader->e_shoff > elf_size ||
+        elfHeader->e_shnum > (elf_size - elfHeader->e_shoff) / sizeof(Elf32_Shdr)){
         return;
     }
-    
+
     if (elfHeader -> e_shnum > 0) {
         Elf32_Shdr* sectionHeaders = (Elf32_Shdr*)(elf + elfHeader -> e_shoff);
         for(int i = 0; i < elfHeader -> e_shnum; ++i){
@@ -21,7 +24,7 @@ void parse32(Elf32_parse_result& result, unsigned char* elf, unsigned long elf_s
         for (size_t i = 0; i < elfHeader -> e_shnum; ++i) {
             Elf32_Shdr* sH = &sectionHeaders[i];
             if (sH -> sh_type == 2 || sH -> sh_type == 11)
-                process_symbol_table32(result, elf, sH, sectionHeaders, correctEndian, elf_size);    
+                process_symbol_table32(result, elf, sH, sectionHeaders, correctEndian, elf_size, elfHeader->e_shnum);
         }
     } else {
         std::cerr << "=========================== ERROR ===========================" << std::endl;
@@ -34,23 +37,24 @@ void parse32(Elf32_parse_result& result, unsigned char* elf, unsigned long elf_s
 }
 
 
-void process_symbol_table32(Elf32_parse_result& result, unsigned char* elf, Elf32_Shdr* sH, 
-    Elf32_Shdr* sectionHeaders, const bool correctEndian, unsigned long elf_size)
+void process_symbol_table32(Elf32_parse_result& result, unsigned char* elf, Elf32_Shdr* sH,
+    Elf32_Shdr* sectionHeaders, const bool correctEndian, unsigned long elf_size, uint16_t shnum)
 {
-    if(sH->sh_offset + sH->sh_size > elf_size){
+    if(sH->sh_offset > elf_size || sH->sh_size > elf_size - sH->sh_offset){
         return;
     }
-    
+
     Elf32_Sym* symbol_table = (Elf32_Sym*)(elf + sH->sh_offset);
     size_t num_symbols = sH->sh_size / sizeof(Elf32_Sym);
-    
-    if(sH->sh_link >= 0xFFFF){
+
+    // sh_link - индекс секции строк; обязан быть внутри таблицы секций.
+    if(sH->sh_link >= shnum){
         return;
     }
-    
+
     Elf32_Shdr* strtab_shdr = &sectionHeaders[sH->sh_link];
-    
-    if(strtab_shdr->sh_offset + strtab_shdr->sh_size > elf_size){
+
+    if(strtab_shdr->sh_offset > elf_size || strtab_shdr->sh_size > elf_size - strtab_shdr->sh_offset){
         return;
     }
     

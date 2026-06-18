@@ -1,4 +1,5 @@
 #include "StatusCheck.h"
+#include "ConfigIndex.h"
 void printHelp(){
 	std::cout << "Specify entry file right after belder if it is not main.c or main.cpp:" << std::endl;
 	std::cout << "\t\tbelder entry.cpp (exmp)" << std::endl;
@@ -63,55 +64,55 @@ void printHelp(){
 	std::cout << std::endl;
 }
 void printStatus(const std::vector<std::string>& parameters){
-	if(parameters[0] != "-1")
-		std::cout << "Entry file: " << parameters[0] << std::endl;
-	std::cout << "Output file: " << parameters[1] << std::endl;
-	if(parameters[3] != "-1"){
+	if(parameters[CFG_ENTRY] != "-1")
+		std::cout << "Entry file: " << parameters[CFG_ENTRY] << std::endl;
+	std::cout << "Output file: " << parameters[CFG_OUTPUT] << std::endl;
+	if(parameters[CFG_FORCE_LINK] != "-1"){
 		std::cout << "Force linking files: " << std::endl;
-		std::cout << "\t" << parameters[3] << std::endl;
+		std::cout << "\t" << parameters[CFG_FORCE_LINK] << std::endl;
 	}
-	if(parameters[4] != "-1"){
+	if(parameters[CFG_FORCE_UNLINK] != "-1"){
 		std::cout << "Force unlinking files: " << std::endl;
-		std::cout << "\t" << parameters[4] << std::endl;
+		std::cout << "\t" << parameters[CFG_FORCE_UNLINK] << std::endl;
 	}
-	auto compilers = split(parameters[5]);
+	auto compilers = split(parameters[CFG_COMPILERS]);
 	std::cout << "C compiler:	" << ((compilers[0] == "default") ? "gcc" : compilers[0]) << std::endl;
 	std::cout << "CPP compiler:	" << ((compilers[1] == "default") ? "g++" : compilers[1]) << std::endl;
 	
-	if(parameters[7] != "-1")
-		std::cout << "C++ Standart: " << parameters[7] << std::endl;
-	if(parameters[15] != "-1")
-		std::cout << "C Standart: " << parameters[15] << std::endl;
-	if(parameters[8] != "-1")
-		std::cout << "Opt: " << parameters[8] << std::endl;
-	if(parameters[9] != "-1")
-		std::cout << "Debug: " << parameters[9] << std::endl;
-	if(parameters[10] != "-1"){
+	if(parameters[CFG_CXX_STANDARD] != "-1")
+		std::cout << "C++ Standart: " << parameters[CFG_CXX_STANDARD] << std::endl;
+	if(parameters[CFG_C_STANDARD] != "-1")
+		std::cout << "C Standart: " << parameters[CFG_C_STANDARD] << std::endl;
+	if(parameters[CFG_OPT] != "-1")
+		std::cout << "Opt: " << parameters[CFG_OPT] << std::endl;
+	if(parameters[CFG_DEBUG] != "-1")
+		std::cout << "Debug: " << parameters[CFG_DEBUG] << std::endl;
+	if(parameters[CFG_COMPILE_FLAGS] != "-1"){
 		std::cout << "Compile flags: " << std::endl;
-		std::cout << "\t" << parameters[10] << std::endl;
+		std::cout << "\t" << parameters[CFG_COMPILE_FLAGS] << std::endl;
 	}
-	if(parameters[11] != "-1"){
+	if(parameters[CFG_LINK_FLAGS] != "-1"){
 		std::cout << "Link flags: " << std::endl;
-		std::cout << "\t" << parameters[11] << std::endl;
+		std::cout << "\t" << parameters[CFG_LINK_FLAGS] << std::endl;
 	}
-	if(parameters[12] != "-1"){
+	if(parameters[CFG_GENERAL_FLAGS] != "-1"){
 		std::cout << "Other Flags: " << std::endl;
-		std::cout << "\t" << parameters[12] << std::endl;
+		std::cout << "\t" << parameters[CFG_GENERAL_FLAGS] << std::endl;
 	}
-	if(parameters[6] != "-1"){
+	if(parameters[CFG_ADD_INCLUDE] != "-1"){
 		std::cout << "Additional directories: " << std::endl;
-		std::cout << "\t" << parameters[6] << std::endl;
+		std::cout << "\t" << parameters[CFG_ADD_INCLUDE] << std::endl;
 	}
-	if(parameters[14] != "-1"){
+	if(parameters[CFG_FORCE_UNLINK_DIRS] != "-1"){
 		std::cout << "Force unlinking directories: " << std::endl;
-		std::cout << "\t" << parameters[14] << std::endl;
+		std::cout << "\t" << parameters[CFG_FORCE_UNLINK_DIRS] << std::endl;
 	}
-	if(parameters[2] != "-1"){
+	if(parameters[CFG_FORCE_LINK_LIBS] != "-1"){
 		std::cout << "Force linking libs: " << std::endl;
-		std::cout << "\t" << parameters[2] << std::endl; 
+		std::cout << "\t" << parameters[CFG_FORCE_LINK_LIBS] << std::endl; 
 	}
-	if(parameters[13] != "-1"){
+	if(parameters[CFG_FORCE_UNLINK_LIBS] != "-1"){
 		std::cout << "Force Unlinking libs: " << std::endl;
-		std::cout << "\t" << parameters[13] << std::endl;
+		std::cout << "\t" << parameters[CFG_FORCE_UNLINK_LIBS] << std::endl;
 	}
 }

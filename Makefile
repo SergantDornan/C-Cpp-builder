@@ -7,7 +7,10 @@ CPPC=g++
 C++standart=-std=c++17
 OPT=-O2
 DEPFLAGS=-MP -MD
-GENERALFLAGS=$(C++standart) -g3 -w
+# Включаем предупреждения. Шумные для этого стиля кода (знаковые сравнения
+# в циклах, неиспользуемые параметры) глушим, чтобы видеть реальные проблемы.
+WARNINGS=-Wall -Wextra -Wno-sign-compare -Wno-unused-parameter -Wno-unused-variable
+GENERALFLAGS=$(C++standart) -g3 $(WARNINGS)
 CFLAGS=$(GENERALFLAGS) $(OPT) $(DEPFLAGS)
 CFILES=$(foreach D, $(SOURCEDIR), $(wildcard $(D)/*.cpp))
 OBJECTS=$(patsubst $(SOURCEDIR)%.cpp, $(deps)%.o, $(CFILES))
@@ -44,7 +47,7 @@ $(BELDERBINARY): $(OBJECTS)
 	$(CPPC) $^ -o $@
 
 $(deps)/t_%.o: $(TESTSDIR)/%.cpp
-	$(CPPC) $(C++standart) -g3 -w $(GTEST_CFLAGS) -I$(TESTSDIR) -DBELDER_BINARY='"$(abspath $(BELDERBINARY))"' -c $< -o $@
+	$(CPPC) $(C++standart) -g3 $(WARNINGS) $(GTEST_CFLAGS) -I$(TESTSDIR) -DBELDER_BINARY='"$(abspath $(BELDERBINARY))"' -c $< -o $@
 
 $(TESTBIN): $(TESTOBJECTS)
 	$(CPPC) $^ -o $@ $(GTEST_LIBS)

@@ -3,7 +3,9 @@ std::string getFullPath(const std::string& cd_, const std::string& relpath_)
 {
     std::string cd = cd_;
     std::string relpath = relpath_;
-    if(cd.size() == 0 && relpath.size() == 0){
+    // Дальше безусловно обращаемся к relpath[0] и cd[cd.size()-1],
+    // поэтому пустым не должен быть ни один из аргументов.
+    if(cd.size() == 0 || relpath.size() == 0){
         std::cerr << "======================== ERROR ========================" << std::endl;
         std::cerr << "filework.cpp: getFullPath, cd.size() = 0 or relpath.size() = 0" << std::endl;
         std::cerr << std::endl;
@@ -80,6 +82,8 @@ void findFile(std::vector<std::string>& result,
 
 long getFileSize(const std::string& filename) {
     std::ifstream file(filename, std::ifstream::ate | std::ifstream::binary);
+    if(!file.is_open())
+        return -1;
     return file.tellg();
 }
 
@@ -167,15 +171,18 @@ void appendToFile(const std::string& path, const std::string& s){
     }
 }
 std::string formatTime(time_t timestamp) {
-    std::tm *timeInfo = localtime(&timestamp);
-    if (timeInfo == nullptr) {
+    // localtime() возвращает указатель на общий статический буфер и не
+    // потокобезопасен; getChangeTime() вызывается из потоков компиляции,
+    // поэтому используем реентерабельный localtime_r().
+    std::tm timeInfo;
+    if (localtime_r(&timestamp, &timeInfo) == nullptr) {
         std::cerr << "===================== ERROR =====================" << std::endl;
         std::cerr << "filework.cpp: formatTime() - some error idk" << std::endl;
         std::cerr << std::endl;
         return "";
     }
     std::stringstream ss;
-    ss << std::put_time(timeInfo, "%Y-%m-%d %H:%M:%S");
+    ss << std::put_time(&timeInfo, "%Y-%m-%d %H:%M:%S");
     return ss.str();
 }
 std::string getChangeTime(const std::string& path){

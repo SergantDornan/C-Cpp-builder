@@ -3,20 +3,24 @@
 #include <cstring>
 
 void parse_ARLIB(binFile& newfile){
-	std::ifstream file(newfile.name, std::ios::binary);
-    unsigned long size = getFileSize(newfile.name);
-    
-    if(size < 8){
+    long fileSize = getFileSize(newfile.name);
+    // size < 8 так же отсекает -1 (файл не открылся), т.к. сравнение знаковое.
+    if(fileSize < 8){
     	std::cerr << "==================================== ERROR ====================================" << std::endl;
         std::cerr << "belder thinks that file: " << newfile.name << std::endl;
         std::cerr << "is an AR (static lib) file but it is too small" << std::endl;
         std::cerr << std::endl;
         return;
     }
-    
-    unsigned char* ar = new unsigned char[size];
-    file.read((char*)ar, size);
+    unsigned long size = (unsigned long)fileSize;
+
+	std::ifstream file(newfile.name, std::ios::binary);
+    if(!file.is_open())
+        return;
+    std::vector<unsigned char> buffer(size); // RAII вместо ручного new/delete
+    file.read((char*)buffer.data(), size);
     file.close();
+    unsigned char* ar = buffer.data();
 
 	bool isAR = false;
     if(size >= 8){
@@ -40,10 +44,9 @@ void parse_ARLIB(binFile& newfile){
         // std::cerr << "try running belder with -reb flag or with \"clear\" option" << std::endl;
         // std::cerr << "or maybe you specified some strange file in force link section" << std::endl;
         // std::cerr << std::endl;
-    	delete[] ar;
     	return;
     }
-    
+
     unsigned char* ptr = ar + 8;
     unsigned char* endptr = ar + size;
     
@@ -85,6 +88,4 @@ void parse_ARLIB(binFile& newfile){
             ptr++;
         }
     }
-    
-    delete[] ar;
 }

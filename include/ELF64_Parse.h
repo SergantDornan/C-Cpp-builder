@@ -103,7 +103,7 @@ typedef struct {
 } Elf64_parse_result; // copy of a binFile structure
 
 void parse64(Elf64_parse_result&, unsigned char*, unsigned long elf_size = 0);
-void process_symbol_table64(Elf64_parse_result&, unsigned char*, 
-    Elf64_Shdr*, Elf64_Shdr*, const bool, unsigned long elf_size);
+void process_symbol_table64(Elf64_parse_result&, unsigned char*,
+    Elf64_Shdr*, Elf64_Shdr*, const bool, unsigned long elf_size, uint16_t shnum);
 
 #endif

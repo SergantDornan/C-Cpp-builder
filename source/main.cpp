@@ -6,6 +6,7 @@
 #include "uninstall.h"
 #include "StatusCheck.h"
 #include "Mapping.h"
+#include "ConfigIndex.h"
 
 // Следующая строка заполняется инсталлятором, не менять ее
 const std::string SourceCodeFolder;
@@ -79,12 +80,19 @@ int main(int argc, char* argv[]){
 				std::cerr << std::endl;
 				return 1;
 			}
-			if(!std::stoi(*(it + 1))) {
-				std::cerr << "No number after -T flag" << std::endl;
+			try{
+				numThreads = std::stoi(*(it + 1));
+			}
+			catch(const std::exception&){
+				std::cerr << "Invalid number after -T flag: " << *(it + 1) << std::endl;
 				std::cerr << std::endl;
 				return 1;
 			}
-			numThreads = std::stoi(*(it+1));
+			if(numThreads <= 0){
+				std::cerr << "Number of threads after -T flag must be positive" << std::endl;
+				std::cerr << std::endl;
+				return 1;
+			}
 			args.erase(it+1);
 			args.erase(it);
 		}
@@ -169,8 +177,8 @@ int main(int argc, char* argv[]){
 	rebuild |= parameters_recompile;
 	relink |= parameters_relink;
 	if(rebuild) clearAllDepFiles(wd);
-	rebuildForSharedLib(prOutName, parameters[1], wd);
-	//if(prOutName != parameters[1] || prInName != parameters[0]) relink = true;
+	rebuildForSharedLib(prOutName, parameters[CFG_OUTPUT], wd);
+	//if(prOutName != parameters[CFG_OUTPUT] || prInName != parameters[CFG_ENTRY]) relink = true;
 	std::ofstream out(projectConfig);
 	for(int i = 0; i < parameters.size(); ++i) out << parameters[i] << std::endl;
 	out.close();
@@ -184,9 +192,24 @@ int main(int argc, char* argv[]){
 		std::cout << "Config updated" << std::endl;
 		return 0;
 	}
+
+	// Имя выходного файла подставляется в shell-команды компиляции/линковки
+	// (system()). Метасимволы в нём -> инъекция команд. Пока сборка идёт через
+	// system() со склейкой строк, отсекаем такие имена. Разрешены обычные
+	// для пути символы; запрещены shell-метасимволы и пробелы.
+	const std::string forbiddenChars = " \t\n\r;&|<>()$`\"'\\*?!{}[]~#";
+	if(parameters[CFG_OUTPUT].find_first_of(forbiddenChars) != std::string::npos){
+		std::cerr << "================== ERROR ==================" << std::endl;
+		std::cerr << "Output file name contains forbidden characters: " << std::endl;
+		std::cerr << parameters[CFG_OUTPUT] << std::endl;
+		std::cerr << "Shell metacharacters and spaces are not allowed in the output name" << std::endl;
+		std::cerr << std::endl;
+		return 1;
+	}
+
 	int linkType = 0;
-	if(getName(parameters[1]).size() > 5){
-		std::string name = getName(parameters[1]);
+	if(getName(parameters[CFG_OUTPUT]).size() > 5){
+		std::string name = getName(parameters[CFG_OUTPUT]);
 		std::string prefix(name.begin(), name.begin() + 3);
 		if(prefix == "lib"){
 			std::string ext = getExt(name); 
@@ -194,18 +217,18 @@ int main(int argc, char* argv[]){
 			else if(ext == "so") linkType = 2;
 		}
 	}
-	if(parameters[0] == "-1") return 1;
+	if(parameters[CFG_ENTRY] == "-1") return 1;
 	std::vector<std::string> allHeaders, allSource, allLibs;
 	std::vector<std::string> fUnIncludeDirs, fUnLib, forceUnlink;
-	if(parameters[4] != "-1") forceUnlink = split(parameters[4]);
-	if(parameters[13] != "-1") fUnLib = split(parameters[13]);
-	if(linkType == 1 || linkType == 2) fUnLib.push_back(parameters[1]);
-	if(parameters[14] != "-1") fUnIncludeDirs = split(parameters[14]);
+	if(parameters[CFG_FORCE_UNLINK] != "-1") forceUnlink = split(parameters[CFG_FORCE_UNLINK]);
+	if(parameters[CFG_FORCE_UNLINK_LIBS] != "-1") fUnLib = split(parameters[CFG_FORCE_UNLINK_LIBS]);
+	if(linkType == 1 || linkType == 2) fUnLib.push_back(parameters[CFG_OUTPUT]);
+	if(parameters[CFG_FORCE_UNLINK_DIRS] != "-1") fUnIncludeDirs = split(parameters[CFG_FORCE_UNLINK_DIRS]);
 	getAllheaders(allHeaders,cd,forceUnlink,fUnIncludeDirs);
 	getAllsource(allSource,cd,forceUnlink,fUnIncludeDirs); 
 	getAllLibs(allLibs,cd,fUnLib,fUnIncludeDirs); 
-	if(parameters[6] != "-1"){ // additional -I list
-		auto AddInc = split(parameters[6]);
+	if(parameters[CFG_ADD_INCLUDE] != "-1"){ // additional -I list
+		auto AddInc = split(parameters[CFG_ADD_INCLUDE]);
 		for(int i = 0; i < AddInc.size(); ++i){
 			if(!std::filesystem::is_directory(AddInc[i]) || !exists(AddInc[i])){
             	std::cerr << "========================== ERROR ==========================" << std::endl;
@@ -224,22 +247,22 @@ int main(int argc, char* argv[]){
 	std::vector<FileNode> map;
 	std::vector<int> leaves = getMap(allHeaders,allSource,map);
  	std::vector<std::string> includes, dummy;
-	getIncludes(includes,dummy,map,leaves,parameters[0],true);
+	getIncludes(includes,dummy,map,leaves,parameters[CFG_ENTRY],true);
 	bool changeSet = createDepfiles(wd, allHeaders, allSource, log);
 	std::vector<std::string> toCompile = compile(wd,parameters,changeSet,log,linkType,map,leaves,numThreads);
 	updateSymfiles(wd, allLibs);
 	std::string linkmsg = link(wd, parameters, includes, toCompile, 
 		log, linkType, relink, idgaf, allLibs);
 	
-	if(linkmsg == "success" && exists(parameters[1]))
+	if(linkmsg == "success" && exists(parameters[CFG_OUTPUT]))
 		std::cout << "============================ SUCCESS ============================\n" << std::endl;
-    else if(linkmsg == "nothing to link" && exists(parameters[1]))
+    else if(linkmsg == "nothing to link" && exists(parameters[CFG_OUTPUT]))
     	std::cout << "belder: nothing to link" << std::endl;
     else if(linkmsg == "compilation error")
     	std::cout << "belder: compilation error" << std::endl;
-    if(run && exists(parameters[1]) && linkmsg != "compilation error"){
+    if(run && exists(parameters[CFG_OUTPUT]) && linkmsg != "compilation error"){
 		if(linkType == 0){
-			std::string cmd = parameters[1];
+			std::string cmd = parameters[CFG_OUTPUT];
 			system(cmd.c_str());
 		}
 		else{
