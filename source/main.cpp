@@ -206,15 +206,9 @@ int main(int argc, char* argv[]){
 	}
 
 	int linkType = 0;
-	if(getName(parameters[CFG_OUTPUT]).size() > 5){
-		std::string name = getName(parameters[CFG_OUTPUT]);
-		std::string prefix(name.begin(), name.begin() + 3);
-		if(prefix == "lib"){
-			std::string ext = getExt(name); 
-			if(ext == "a") linkType = 1;
-			else if(ext == "so") linkType = 2;
-		}
-	}
+	std::string libType = getLibType(parameters[CFG_OUTPUT]);
+	if(libType == "a") linkType = 1;
+	else if(libType == "so") linkType = 2;
 	if(parameters[CFG_ENTRY] == "-1") return 1;
 	std::vector<std::string> allHeaders, allSource, allLibs;
 	std::vector<std::string> fUnIncludeDirs, fUnLib, forceUnlink;

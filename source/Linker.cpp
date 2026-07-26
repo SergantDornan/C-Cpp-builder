@@ -155,9 +155,9 @@ void OneThreadObjAnal(const std::string& wd, const std::string& name,binFile& ma
 		if(!ok){ // кэша нет или он повреждён - перечитываем из библиотеки
 			newfile.callSyms.clear();
 			newfile.defSyms.clear();
-			std::string ext = getExt(allLibs[i]);
-			if(ext == "so") parse_ELF_File(newfile);
-			else if(ext == "a") parse_ARLIB(newfile);
+			std::string libType = getLibType(allLibs[i]);
+			if(libType == "so") parse_ELF_File(newfile);
+			else if(libType == "a") parse_ARLIB(newfile);
 			createSymfile(newfile, symFile);
 		}
 		filesInfo.push_back(newfile);
@@ -192,7 +192,7 @@ int findLinks(std::vector<std::string>& toLink, const std::vector<binFile>& file
 				// Конфликтов нет, либо мы их игнорируем:
 				if(find(toLink, filesInfo[j].name) == -1){
 					toLink.push_back(filesInfo[j].name);
-					std::cout << "Adding file: " << filesInfo[j].name << std::endl;
+					//std::cout << "Adding file: " << filesInfo[j].name << std::endl;
 					binLink.push_back(filesInfo[j]);
 					syms[file.callSyms[i]] = filesInfo[j].name;
 					findLinks(toLink, filesInfo, filesInfo[j], syms, idgaf, binLink,wd);
@@ -217,8 +217,16 @@ std::string link(const std::string& wd,
 	std::vector<std::string> libsToLink, sharedLibDirs;
 	auto iter = toLink.begin();
 	while(iter != toLink.end()){
-		if(getExt(*iter) == "so" || getExt(*iter) == "a") {
+		std::string libType = getLibType(*iter);
+		if(libType != "") {
 			libsToLink.push_back(*iter);
+			// Разделяемой библиотеке нужен -rpath, иначе динамический загрузчик
+			// не найдет .so во время запуска. Собираем уникальные каталоги .so.
+			if(libType == "so"){
+				std::string dir = getFolder(*iter);
+				if(!dir.empty() && find(sharedLibDirs, dir) == -1)
+					sharedLibDirs.push_back(dir);
+			}
 			toLink.erase(iter);
 		}
 		else iter++;
@@ -278,6 +286,9 @@ std::string link(const std::string& wd,
 		for(int i = CFG_LINK_FLAGS; i <= CFG_GENERAL_FLAGS; ++i)
 			if(parameters[i] != "-1") appendArgs(argv, parameters[i]);
 		for(int i = 0; i < libsToLink.size(); ++i) argv.push_back(libsToLink[i]);
+		// rpath на каталоги подключаемых .so, чтобы загрузчик нашел их в рантайме
+		for(int i = 0; i < sharedLibDirs.size(); ++i)
+			argv.push_back("-Wl,-rpath," + sharedLibDirs[i]);
 		argv.push_back("-o");
 		argv.push_back(parameters[CFG_OUTPUT]);
 		if(log) std::cout << joinArgs(argv) << std::endl;
@@ -304,18 +315,8 @@ std::string link(const std::string& wd,
 		out << parameters[i] << std::endl;
 	out.close();
 
-	if(sharedLibDirs.size() > 0){
-		std::string cmd = POST_SHARED_LINK;
-		for(int i = 0; i < sharedLibDirs.size(); ++i)
-			cmd += (":" + sharedLibDirs[i]);
-		if(log){
-			std::cout << std::endl;
-			std::cout << cmd << std::endl;
-		}
-		// Раньше тут был system("export LD_LIBRARY_PATH=..."), но export в
-		// подоболочке, которая сразу завершается, ничего не менял (no-op);
-		// к тому же блок недостижим (sharedLibDirs всегда пуст). Без exec.
-	}
+	// Каталоги подключаемых .so теперь прописываются в сам бинарник через
+	// -Wl,-rpath (см. сборку argv выше), поэтому LD_LIBRARY_PATH больше не нужен.
 	return "success";
 }
 

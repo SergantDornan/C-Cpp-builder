@@ -301,6 +301,84 @@ TEST_F(BelderFixture, TwoHeadersMatchingIncludeConflict) {
 }
 
 // -----------------------------------------------------------------------
+// Recursive headers spread across DIFFERENT folders.
+//
+// main.cpp  (project root)   includes "aboba.h"
+// alpha/aboba.h              includes "boba.h"   (folder A -> folder B)
+// beta/boba.h                leaf header
+//
+// Neither header lives in the including file's own directory, so g++'s
+// quote-include same-dir fallback cannot find them: the ONLY way boba.h is
+// found is if belder recursively collects the -I directory of beta/ and adds
+// it to main.cpp's compile command. If belder only records the -I dir of the
+// DIRECT include (alpha/), the transitive #include "boba.h" fails with
+// "boba.h: No such file or directory" and the object is never produced.
+// -----------------------------------------------------------------------
+TEST_F(BelderFixture, RecursiveHeaderAcrossFolders) {
+    if (!toolExists("g++")) GTEST_SKIP() << "g++ not found";
+
+    write("beta/boba.h",
+          "#pragma once\n"
+          "inline int boba(){ return 42; }\n");
+    write("alpha/aboba.h",
+          "#pragma once\n"
+          "#include \"boba.h\"\n"
+          "inline int aboba(){ return boba() + 1; }\n");
+    write("main.cpp",
+          "#include \"aboba.h\"\n"
+          "#include <iostream>\n"
+          "int main(){ std::cout << aboba() << std::endl; return 0; }\n");
+
+    auto r = runBelder();
+    EXPECT_FALSE(r.hasOutput("boba.h") && r.hasOutput("No such file"))
+        << "Transitively-included boba.h (in another folder) was not found — "
+           "belder did not propagate its -I directory: " << r.combined();
+    EXPECT_EQ(r.exitCode, 0)
+        << "Recursive cross-folder header should compile: " << r.combined();
+    EXPECT_TRUE(fileExists("out"))
+        << "Output binary should be produced: " << r.combined();
+}
+
+// -----------------------------------------------------------------------
+// Deeper variant: a 3-link recursive chain, each header in its own folder.
+//
+// main.cpp -> alpha/aboba.h -> beta/boba.h -> gamma/viba.h
+//
+// Every hop crosses into a new directory, so belder must collect the -I dirs
+// of alpha/, beta/ AND gamma/ for main.cpp to compile. This guards against a
+// "only one level deep" partial fix as well as no recursion at all.
+// -----------------------------------------------------------------------
+TEST_F(BelderFixture, RecursiveHeaderChainAcrossThreeFolders) {
+    if (!toolExists("g++")) GTEST_SKIP() << "g++ not found";
+
+    write("gamma/viba.h",
+          "#pragma once\n"
+          "inline int viba(){ return 7; }\n");
+    write("beta/boba.h",
+          "#pragma once\n"
+          "#include \"viba.h\"\n"
+          "inline int boba(){ return viba() + 1; }\n");
+    write("alpha/aboba.h",
+          "#pragma once\n"
+          "#include \"boba.h\"\n"
+          "inline int aboba(){ return boba() + 1; }\n");
+    write("main.cpp",
+          "#include \"aboba.h\"\n"
+          "#include <iostream>\n"
+          "int main(){ std::cout << aboba() << std::endl; return 0; }\n");
+
+    auto r = runBelder();
+    EXPECT_FALSE((r.hasOutput("boba.h") || r.hasOutput("viba.h")) &&
+                 r.hasOutput("No such file"))
+        << "A transitively-included header in another folder was not found — "
+           "belder did not recursively propagate its -I directory: " << r.combined();
+    EXPECT_EQ(r.exitCode, 0)
+        << "Multi-level cross-folder header chain should compile: " << r.combined();
+    EXPECT_TRUE(fileExists("out"))
+        << "Output binary should be produced: " << r.combined();
+}
+
+// -----------------------------------------------------------------------
 // Conflict: two .cpp files providing same functions
 // -----------------------------------------------------------------------
 TEST_F(BelderFixture, DuplicateFunctionDefinitionConflict) {

@@ -2,11 +2,7 @@
 #include "algs.h"
 #include "ConfigIndex.h"
 bool isLib(const std::string& s0){
-	std::string s = getName(s0);
-	if(s.size() < 4) return false;
-	if(std::string(s.begin(), s.begin() + 3) != "lib") return false;
-	if(getExt(s) != "a" && getExt(s) != "so") return false;
-	return true;
+	return getLibType(s0) != "";
 }
 bool isFlag(const std::string& s){
 	return ((s.size() >= 2 && s[0] == '-' && s[1] != '-') ||

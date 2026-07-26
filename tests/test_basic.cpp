@@ -283,6 +283,61 @@ TEST_F(BelderFixture, SharedLibraryBuild) {
 }
 
 // -----------------------------------------------------------------------
+// Versioned shared library builds: libX.so.4, libX.so.1.2.3
+//
+// belder decides HOW to link from the output name (main.cpp: getExt(name)=="so"
+// -> shared, -fPIC + -shared). getExt("libMyLib.so.4") returns "4", not "so",
+// so a versioned SONAME is NOT recognized as a shared library and belder falls
+// back to an ordinary executable link.
+//
+// The entry file below has NO main() on purpose: a correct shared-library link
+// (-shared) needs no main, but an executable link does — so if belder misreads
+// the versioned name it fails with "undefined reference to `main'" and produces
+// no output. (belder does not propagate the linker's exit code — see README
+// note #1 — so we assert on output artifacts / linker diagnostics, not on the
+// process exit code.)
+// -----------------------------------------------------------------------
+TEST_F(BelderFixture, SharedLibraryVersionedSonameBuild) {
+    if (!toolExists("g++")) GTEST_SKIP() << "g++ not found";
+    write("libfoo.cpp", "int foo(){return 1;}\n");
+
+    std::string out = tmpDir + "/libMyLib.so.4";
+    auto r = runBelder({"libfoo.cpp", "-o", out});
+
+    EXPECT_FALSE(r.hasOutput("undefined reference"))
+        << r.diagnostic("libMyLib.so.4 must be linked as a shared library (-shared), "
+                        "not as an executable");
+    EXPECT_TRUE(std::filesystem::exists(out))
+        << r.diagnostic("Versioned shared library libMyLib.so.4 should be produced");
+
+    if (std::filesystem::exists(out) && toolExists("file")) {
+        auto file_r = runCommand("file " + out);
+        EXPECT_TRUE(file_r.stdout_str.find("shared object") != std::string::npos)
+            << file_r.diagnostic("libMyLib.so.4 should be an ELF shared object");
+    }
+}
+
+TEST_F(BelderFixture, SharedLibraryMultiComponentSonameBuild) {
+    if (!toolExists("g++")) GTEST_SKIP() << "g++ not found";
+    write("libfoo.cpp", "int foo(){return 1;}\n");
+
+    std::string out = tmpDir + "/libMyLib.so.1.2.3";
+    auto r = runBelder({"libfoo.cpp", "-o", out});
+
+    EXPECT_FALSE(r.hasOutput("undefined reference"))
+        << r.diagnostic("libMyLib.so.1.2.3 must be linked as a shared library (-shared), "
+                        "not as an executable");
+    EXPECT_TRUE(std::filesystem::exists(out))
+        << r.diagnostic("Versioned shared library libMyLib.so.1.2.3 should be produced");
+
+    if (std::filesystem::exists(out) && toolExists("file")) {
+        auto file_r = runCommand("file " + out);
+        EXPECT_TRUE(file_r.stdout_str.find("shared object") != std::string::npos)
+            << file_r.diagnostic("libMyLib.so.1.2.3 should be an ELF shared object");
+    }
+}
+
+// -----------------------------------------------------------------------
 // Compilation failure stops build
 // -----------------------------------------------------------------------
 TEST_F(BelderFixture, CompilationFailureStopsLinking) {
@@ -427,4 +482,41 @@ TEST_F(BelderFixture, ComplexTestSharedLib) {
     EXPECT_BELDER_OK(r1, "first lib should be built");
     auto r2 = runBelder({"main1.cpp", "-o", "out", "-log", "--no-link-force", "lib.cpp", "run"});
     EXPECT_TRUE(r2.hasOutput("_main1.cpp_") && r2.hasOutput("_lib.cpp_") && r2.hasOutput("5"));
+}
+
+// -----------------------------------------------------------------------
+// When a .so is linked into the final binary, belder must add -Wl,-rpath
+// with the .so's directory, so the dynamic loader can locate it at runtime.
+// We build a shared library inside a subfolder, link it into an executable,
+// and assert the produced binary carries an RPATH/RUNPATH entry pointing at
+// that subfolder (checked with readelf -d).
+// -----------------------------------------------------------------------
+TEST_F(BelderFixture, SharedLibraryRpathIsAddedToBinary) {
+    if (!toolExists("g++")) GTEST_SKIP() << "g++ not found";
+    if (!toolExists("readelf")) GTEST_SKIP() << "readelf not found";
+
+    write("plugin/stuff.cpp",
+        "#include <iostream>\n"
+        "void stuff(){ std::cout << \"_stuff_\" << std::endl; }\n");
+    write("main.cpp",
+        "#include <iostream>\n"
+        "void stuff();\n"
+        "int main(){ std::cout << \"_main_\" << std::endl; stuff(); }\n");
+
+    // Build the shared library into the plugin/ subfolder.
+    auto r1 = runBelder({"plugin/stuff.cpp", "-o", "plugin/libStuff.so"});
+    EXPECT_BELDER_OK(r1, "shared library plugin/libStuff.so should be built");
+
+    // Link main against the shared library (stuff.cpp treated as a lib).
+    auto r2 = runBelder({"main.cpp", "-o", "out", "--no-link-force", "stuff.cpp", "run"});
+    EXPECT_TRUE(r2.hasOutput("_main_") && r2.hasOutput("_stuff_"))
+        << r2.diagnostic("Executable linked against the .so should run and reach the lib code");
+
+    // The produced binary must record an rpath/runpath to the .so directory.
+    ASSERT_TRUE(fileExists("out")) << r2.diagnostic("output binary should exist");
+    auto rd = runCommand("readelf -d " + path("out"));
+    EXPECT_TRUE(rd.hasOutput("RPATH") || rd.hasOutput("RUNPATH"))
+        << rd.diagnostic("linked binary should have an RPATH/RUNPATH entry for the .so");
+    EXPECT_TRUE(rd.stdout_str.find(path("plugin")) != std::string::npos)
+        << rd.diagnostic("RPATH/RUNPATH should point at the .so directory " + path("plugin"));
 }

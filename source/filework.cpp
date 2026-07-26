@@ -1,5 +1,6 @@
 #include <filework.h>
 #include "Process.h"
+#include <cctype>
 std::string getFullPath(const std::string& cd_, const std::string& relpath_)
 {
     std::string cd = cd_;
@@ -209,6 +210,25 @@ std::string getExt(const std::string& file){
     }
     if(index != -1)
         return std::string(file.begin() + index + 1,file.end());
+    return "";
+}
+std::string getLibType(const std::string& path){
+    std::string s = getName(path);
+    if(s.size() < 4 || std::string(s.begin(), s.begin() + 3) != "lib") return "";
+    std::vector<std::string> parts = split(s, "."); // "libfoo.so.1.2.3" -> [libfoo, so, 1, 2, 3]
+    if(parts.size() < 2) return "";
+    if(parts.back() == "a") return "a"; // статическую версионируют крайне редко
+    // разделяемая: есть компонент "so", а всё после него - числовая версия
+    for(size_t i = 1; i < parts.size(); ++i){
+        if(parts[i] != "so") continue;
+        bool versionOk = true;
+        for(size_t j = i + 1; j < parts.size() && versionOk; ++j){
+            if(parts[j].empty()){ versionOk = false; break; }
+            for(char c : parts[j])
+                if(!std::isdigit(static_cast<unsigned char>(c))){ versionOk = false; break; }
+        }
+        if(versionOk) return "so";
+    }
     return "";
 }
 std::string getNameNoExt(const std::string& path){

@@ -75,13 +75,10 @@ void getAllLibs(std::vector<std::string>& libs, const std::string& path,
             continue;
         }
         
-        std::string longName = getName(dirs[i]);
-        if(longName.size() < 4) continue;
-        if(std::string(longName.begin(), longName.begin() + 3) != "lib") continue;
-        if(getExt(longName) != "a" && getExt(longName) != "so") continue;
-        
+        if(getLibType(dirs[i]) == "") continue;
+
         try {
-            if(!std::filesystem::is_directory(dirs[i]) && 
+            if(!std::filesystem::is_directory(dirs[i]) &&
                 find(libs, dirs[i]) == -1) libs.push_back(dirs[i]);
         } catch (const std::filesystem::filesystem_error& e) {
             continue;

@@ -101,7 +101,7 @@ void UpdateDependencies(const std::vector<std::string>& HDdirs,
     std::vector<std::string> addChangedFiles;
     for(int i = 0; i < changedFiles.size(); ++i){
         std::vector<std::string> includes, Ilist;
-        getIncludes(includes, Ilist, map, leaves, changedFiles[i]);
+        getIncludes(includes, Ilist, map, leaves, changedFiles[i], true);
         std::vector<std::pair<std::string,bool>> changes = getChanges(data[changedFiles[i]][0], includes);
         if(changes.size() > 0){
             data[changedFiles[i]][0] = includes;
@@ -237,11 +237,7 @@ void rebuildForSharedLib(const std::string& n1, const std::string& n2,
     const std::string& wd){
 
     auto isSharedLib = [](const std::string& s0){
-        std::string s = getName(s0);
-        if(s.size() < 4) return false;
-        if(std::string(s.begin(), s.begin() + 3) != "lib") return false;
-        if(getExt(s) != "so") return false;
-        return true;
+        return getLibType(s0) == "so";
     };
 
     if((!isSharedLib(n1) && isSharedLib(n2)) || 
@@ -274,11 +270,7 @@ void rebuildForSharedLib(const std::string& n1, const std::string& n2,
 void updateSymfiles(const std::string& wd, const std::vector<std::string>& allLibs){
 
     auto isLib = [](const std::string& s0){
-        std::string s = getName(s0);
-        if(s.size() < 4) return false;
-        if(std::string(s.begin(), s.begin() + 3) != "lib") return false;
-        if(getExt(s) != "a" && getExt(s) != "so") return false;
-        return true;
+        return getLibType(s0) != "";
     };
 
     auto allObj = getDirs(wd + "/" + SOURCE_DIR + "/" + OBJECTS_DIR);

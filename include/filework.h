@@ -27,6 +27,11 @@ std::string getFolder(const std::string&);
 std::string getExt(const std::string&);
 std::string getName(const std::string&);
 std::string getFolder(const std::string&);
+// getLibType распознает имя библиотеки, включая версионированный SONAME:
+// "so" - разделяемая (libX.so, libX.so.MAJOR[.MINOR...]),
+// "a"  - статическая (libX.a),
+// ""   - не библиотека.
+std::string getLibType(const std::string&);
 std::string getHomedir();
 void appendToFile(const std::string&, const std::string&);
 std::string formatTime(time_t timestamp);
