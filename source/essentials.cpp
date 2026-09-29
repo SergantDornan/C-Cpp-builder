@@ -61,8 +61,10 @@ std::string createEssentials(const bool reb){
 	while(it != projectList.end()){
 		std::string p = split(*it, "*")[0];
 		if(!exists(p)){
-			projectList.erase(it);
-			removeDirectory(root + "/" + split(*it, "*")[1]);
+			// Имя папки берём до erase: после него it указывает на следующую запись
+			std::string staleFolder = split(*it, "*")[1];
+			it = projectList.erase(it);
+			removeDirectory(root + "/" + staleFolder);
 			std::ofstream f(configPath);
 			for(int i = 0; i < projectList.size(); ++i)
 				f << projectList[i] << std::endl;
@@ -101,7 +103,18 @@ std::string createEssentials(const bool reb){
 		removeDirectories(dirs_to_remove);
 	}
 	else if(!isDir){
-		index = std::to_string(projectList.size() + 1);
+		// size()+1 после удаления записей совпадает с индексом живого проекта,
+		// поэтому берём максимальный существующий индекс + 1
+		int maxIndex = 0;
+		for(int i = 0; i < projectList.size(); ++i){
+			auto s = split(projectList[i], "*");
+			if(s.size() < 2) continue;
+			try{
+				maxIndex = std::max(maxIndex, std::stoi(s[1]));
+			}
+			catch(const std::exception&){}
+		}
+		index = std::to_string(maxIndex + 1);
 		std::ofstream config(configPath,std::ios::app);
 		config << cd << '*' << index << std::endl;
 		config.close();
