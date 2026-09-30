@@ -8,6 +8,7 @@
 #include "Mapping.h"
 #include "ConfigIndex.h"
 #include "Process.h"
+#include "Configs.h"
 
 // Следующая строка заполняется инсталлятором, не менять ее
 const std::string SourceCodeFolder;
@@ -69,9 +70,7 @@ int main(int argc, char* argv[]){
 				std::cerr << std::endl;
 				return 1;
 			}
-			std::string newcd = getFullPath(cd,*(it+1));
-			if(newcd[newcd.size() - 1] == '/') cd = std::string(newcd.begin(), newcd.end()-1);
-			else cd = newcd;
+			cd = getFullPath(cd,*(it+1));
 			args.erase(it+1);
 			args.erase(it);
 		}
@@ -133,10 +132,18 @@ int main(int argc, char* argv[]){
 		return 0;
 	}
 	if(args.size() != 0 && args[0] == "reinstall"){
+		if(SourceCodeFolder.empty()){
+			std::cerr << "===================== ERROR =====================" << std::endl;
+			std::cerr << "This belder has no link to the source code folder, cannot reinstall" << std::endl;
+			std::cerr << "It was built without \"make install\", so the path to the sources was not saved" << std::endl;
+			std::cerr << "Run \"make install\" (or \"make pocket\") in the source code folder" << std::endl;
+			std::cerr << std::endl;
+			return 1;
+		}
 		if(!exists(SourceCodeFolder)){
 			std::cerr << "===================== ERROR =====================" << std::endl;
-			std::cerr << "Cannot find folder with source code, cannot reinstall" << std::endl;
-			std::cerr << std::endl;
+			std::cerr << "Cannot find folder with source code, cannot reinstall: " << SourceCodeFolder << std::endl;
+			std::cerr << "The folder was moved or deleted, run \"make install\" in its new location" << std::endl;
 			std::cerr << std::endl;
 			return 1;
 		}
@@ -162,27 +169,22 @@ int main(int argc, char* argv[]){
 	bool run = (find(args, "run") != -1);
 	bool idgaf = (find(args, "--idgaf") != -1);
 	bool relink = (find(args, "--relink") != -1 || find(args, "-rel") != -1);
-	std::string wd = createEssentials(rebuild);
-	std::string projectConfig = wd + "/" + CONFIG_FILE;
-	std::string prInName, prOutName;
-	std::ifstream f(projectConfig);
-	std::getline(f, prInName);
-	std::getline(f, prOutName);
-	f.close();
-	bool parameters_recompile = false, parameters_relink = false;
-	std::vector<std::string> parameters = getParameters(args, projectConfig, cd, prInName,
-		parameters_recompile, parameters_relink);
-	rebuild |= parameters_recompile;
-	relink |= parameters_relink;
-	if(rebuild) clearAllDepFiles(wd);
-	rebuildForSharedLib(prOutName, parameters[CFG_OUTPUT], wd);
-	//if(prOutName != parameters[CFG_OUTPUT] || prInName != parameters[CFG_ENTRY]) relink = true;
-	std::ofstream out(projectConfig);
-	for(int i = 0; i < parameters.size(); ++i) out << parameters[i] << std::endl;
-	out.close();
+	std::string projectDir = createEssentials();
+	std::unique_ptr<FILE, int(*)(FILE*)> projectLock = lockFile(projectDir + "/" + LOCK_FILE);
+	std::string pairDir;
+	if(selectPair(args, cd, projectDir, pairDir) != 0) return 1;
+	std::string pairConfig = pairDir + "/" + CONFIG_FILE;
+	std::vector<std::string> parameters = readConfig(pairConfig);
+	std::vector<std::string> previousParameters = parameters;
+	getParameters(args, cd, parameters);
+	if(profileKey(parameters) != profileKey(previousParameters)) parameters[CFG_PROFILE] = "-1";
+	if(parameters != previousParameters) removeFile(pairDir + "/" + LINK_RECORD_FILE);
+	writeConfig(pairConfig, parameters);
+	removeUnusedProfiles(projectDir);
 
 	if(args.size() != 0 && args[0] == "status"){
 		printStatus(parameters);
+		printConfigs(projectDir, pairDir);
 		return 0;
 	}
 
@@ -210,14 +212,18 @@ int main(int argc, char* argv[]){
 	if(libType == "a") linkType = 1;
 	else if(libType == "so") linkType = 2;
 	if(parameters[CFG_ENTRY] == "-1") return 1;
+	std::string wd = selectProfile(projectDir, pairDir, parameters);
+	if(rebuild) clearAllDepFiles(wd);
 	std::vector<std::string> allHeaders, allSource, allLibs;
-	std::vector<std::string> fUnIncludeDirs, fUnLib, forceUnlink;
+	std::vector<std::string> fUnIncludeDirs, fUnLib, forceUnlink, profileUnlink;
 	if(parameters[CFG_FORCE_UNLINK] != "-1") forceUnlink = split(parameters[CFG_FORCE_UNLINK]);
+	for(int i = 0; i < forceUnlink.size(); ++i)
+		if(!isSourceFile(forceUnlink[i])) profileUnlink.push_back(forceUnlink[i]);
 	if(parameters[CFG_FORCE_UNLINK_LIBS] != "-1") fUnLib = split(parameters[CFG_FORCE_UNLINK_LIBS]);
 	if(linkType == 1 || linkType == 2) fUnLib.push_back(parameters[CFG_OUTPUT]);
 	if(parameters[CFG_FORCE_UNLINK_DIRS] != "-1") fUnIncludeDirs = split(parameters[CFG_FORCE_UNLINK_DIRS]);
 	getAllheaders(allHeaders,cd,forceUnlink,fUnIncludeDirs);
-	getAllsource(allSource,cd,forceUnlink,fUnIncludeDirs); 
+	getAllsource(allSource,cd,profileUnlink,fUnIncludeDirs);
 	getAllLibs(allLibs,cd,fUnLib,fUnIncludeDirs); 
 	if(parameters[CFG_ADD_INCLUDE] != "-1"){ // additional -I list
 		auto AddInc = split(parameters[CFG_ADD_INCLUDE]);
@@ -231,20 +237,30 @@ int main(int argc, char* argv[]){
             	return 1;
         	} 
 			getAllheaders(allHeaders, AddInc[i], forceUnlink,fUnIncludeDirs);
-			getAllsource(allSource, AddInc[i], forceUnlink,fUnIncludeDirs);
+			getAllsource(allSource, AddInc[i], profileUnlink,fUnIncludeDirs);
 			getAllLibs(allLibs,AddInc[i],fUnLib,fUnIncludeDirs);
 		}
 	}
 	
+	std::vector<std::string> pairSource = allSource - forceUnlink;
+
+	if(parameters[CFG_FORCE_LINK_LIBS] != "-1"){
+		auto forceLinkLibs = split(parameters[CFG_FORCE_LINK_LIBS]);
+		for(int i = 0; i < forceLinkLibs.size(); ++i)
+			if(exists(forceLinkLibs[i]) && find(allLibs, forceLinkLibs[i]) == -1 && find(fUnLib, forceLinkLibs[i]) == -1)
+				allLibs.push_back(forceLinkLibs[i]);
+	}
+
 	std::vector<FileNode> map;
 	std::vector<int> leaves = getMap(allHeaders,allSource,map);
  	std::vector<std::string> includes, dummy;
 	getIncludes(includes,dummy,map,leaves,parameters[CFG_ENTRY],true);
 	bool changeSet = createDepfiles(wd, allHeaders, allSource, log);
-	std::vector<std::string> toCompile = compile(wd,parameters,changeSet,log,linkType,map,leaves,numThreads);
-	updateSymfiles(wd, allLibs);
-	std::string linkmsg = link(wd, parameters, includes, toCompile, 
-		log, linkType, relink, idgaf, allLibs);
+	std::vector<std::string> toCompile = compile(wd,parameters,changeSet,log,linkType,map,leaves,
+		numThreads,pairSource);
+	updateSymfiles(wd);
+	std::string linkmsg = link(wd, pairDir, parameters, includes, toCompile, 
+		log, linkType, relink, idgaf, allLibs, pairSource);
 	
 	if(linkmsg == "success" && exists(parameters[CFG_OUTPUT]))
 		std::cout << "============================ SUCCESS ============================\n" << std::endl;
@@ -252,7 +268,10 @@ int main(int argc, char* argv[]){
     	std::cout << "belder: nothing to link" << std::endl;
     else if(linkmsg == "compilation error")
     	std::cout << "belder: compilation error" << std::endl;
-    if(run && exists(parameters[CFG_OUTPUT]) && linkmsg != "compilation error"){
+    else if(linkmsg == "link error")
+    	std::cout << "belder: link error" << std::endl;
+    projectLock.reset();
+    if(run && exists(parameters[CFG_OUTPUT]) && linkmsg != "compilation error" && linkmsg != "link error"){
 		if(linkType == 0){
 			// Имя вывода - абсолютный путь (содержит '/'), запускается напрямую.
 			runProcess({parameters[CFG_OUTPUT]});
@@ -265,5 +284,6 @@ int main(int argc, char* argv[]){
 	}
 	if(linkmsg == "nothing to link") return 0;
 	else if(linkmsg == "compilation error") return 2;
+	else if(linkmsg == "link error") return 3;
     else return 0;
 }

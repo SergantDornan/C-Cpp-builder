@@ -42,11 +42,15 @@ void createSymfile(binFile& newfile, const std::string& path){
 }
 
 std::vector<std::string> toLinkList(const std::vector<std::string>& parameters,
-	const std::string& wd,const bool idgaf, const std::vector<std::string>& allLibs){
+	const std::string& wd,const bool idgaf, const std::vector<std::string>& allLibs,
+	const std::vector<std::string>& pairSource){
 
 	std::string objFolder = wd + "/" + SOURCE_DIR + "/" + OBJECTS_DIR;
-	auto allObj = getDirs(objFolder);
-	allObj.erase(allObj.begin());
+	std::vector<std::string> allObj;
+	for(int i = 0; i < pairSource.size(); ++i){
+		std::string obj = objFolder + "/" + convertPathToName(pairSource[i]) + ".o";
+		if(exists(obj)) allObj.push_back(obj);
+	}
 	std::vector<std::string> toLink;
 	std::vector<binFile> filesInfo;
 	binFile mainObj = {"main"};
@@ -202,18 +206,54 @@ int findLinks(std::vector<std::string>& toLink, const std::vector<binFile>& file
 	}
 	return 0;
 }	
-std::string link(const std::string& wd, 
+static std::vector<std::string> linkState(const std::vector<std::string>& toLink,
+	const std::vector<std::string>& libsToLink){
+
+	std::vector<std::string> state;
+	for(int i = 0; i < toLink.size(); ++i)
+		state.push_back(toLink[i] + " " + getChangeTime(toLink[i]));
+	for(int i = 0; i < libsToLink.size(); ++i)
+		state.push_back(libsToLink[i] + " " + getChangeTime(libsToLink[i]));
+	return state;
+}
+
+static bool isLinkUpToDate(const std::string& recordPath, const std::string& output,
+	const std::vector<std::string>& state){
+
+	if(!exists(output)) return false;
+	std::vector<std::string> record;
+	std::string line;
+	std::ifstream in(recordPath);
+	while(std::getline(in, line)) record.push_back(line);
+	in.close();
+	return record.size() == state.size() + 1 &&
+		record[0] == getChangeTime(output) &&
+		std::equal(state.begin(), state.end(), record.begin() + 1);
+}
+
+static void writeLinkRecord(const std::string& recordPath, const std::string& output,
+	const std::vector<std::string>& state){
+
+	std::ofstream out(recordPath);
+	out << getChangeTime(output) << std::endl;
+	for(int i = 0; i < state.size(); ++i) out << state[i] << std::endl;
+	out.close();
+}
+
+std::string link(const std::string& wd, const std::string& pairDir,
 	const std::vector<std::string>& parameters,
 	const std::vector<std::string>& includes, 
 	const std::vector<std::string>& toCompile,
 	const bool log, const int linkType, const bool relink,
-	const bool idgaf, const std::vector<std::string>& allLibs)
+	const bool idgaf, const std::vector<std::string>& allLibs,
+	const std::vector<std::string>& pairSource)
 {
 	if(toCompile.size() != 0 && toCompile[0] == "-1")
 		return "compilation error";
 	//if(toCompile.size() == 0 && exists(parameters[CFG_OUTPUT]) && !relink)
 	//	return "nothing to link";
-	std::vector<std::string> toLink = toLinkList(parameters,wd,idgaf,allLibs);
+	std::vector<std::string> toLink = toLinkList(parameters,wd,idgaf,allLibs,pairSource);
+	if(toLink.size() == 0) return "link error";
 	std::vector<std::string> libsToLink, sharedLibDirs;
 	auto iter = toLink.begin();
 	while(iter != toLink.end()){
@@ -233,11 +273,15 @@ std::string link(const std::string& wd,
 	}
 	if(toLink.size() == 0) return "nothing to link";
 
-	bool linking = updateOutputFiles(toCompile, wd, parameters, toLink) | relink; 
-	if(!linking) return "nothing to link";
+	const std::string recordPath = pairDir + "/" + LINK_RECORD_FILE;
+	const std::vector<std::string> state = linkState(toLink, libsToLink);
+	if(!relink && isLinkUpToDate(recordPath, parameters[CFG_OUTPUT], state))
+		return "nothing to link";
 
 	std::string objFolder = wd + "/" + SOURCE_DIR + "/" + OBJECTS_DIR;
 	if(exists(parameters[CFG_OUTPUT])) removeFile(parameters[CFG_OUTPUT]);
+	std::string outputFolder = getFolder(parameters[CFG_OUTPUT]);
+	if(!outputFolder.empty() && !exists(outputFolder)) createDirectory(outputFolder);
 	auto it = toLink.begin();
 	while(it != toLink.end()){
 		bool erase = false;
@@ -308,91 +352,13 @@ std::string link(const std::string& wd,
 		return "nothing to link";
 	}
 
-	const std::string curr_config = wd + "/" + OUTPUT_CONFIGS_FOLDER + "/" + convertPathToName(parameters[CFG_ENTRY]) + "_" + convertPathToName(parameters[CFG_OUTPUT]);
-	std::ofstream out(curr_config);
-	out << ((code == 0) ? "true" : "false") << std::endl;
-	for(int i = 0; i < parameters.size(); ++i)
-		out << parameters[i] << std::endl;
-	out.close();
+	if(code != 0){
+		removeFile(recordPath);
+		return "link error";
+	}
+	writeLinkRecord(recordPath, parameters[CFG_OUTPUT], state);
 
 	// Каталоги подключаемых .so теперь прописываются в сам бинарник через
 	// -Wl,-rpath (см. сборку argv выше), поэтому LD_LIBRARY_PATH больше не нужен.
 	return "success";
-}
-
-bool updateOutputFiles(const std::vector<std::string>& toCompile,
-					   const std::string& wd, 
-					   const std::vector<std::string>& curr_parameters,
-					   const std::vector<std::string>& curr_toLink){
-
-	
-	const std::string output_configs_folder = wd + "/" + OUTPUT_CONFIGS_FOLDER;
-	if(!exists(output_configs_folder))
-		createDirectory(output_configs_folder);
-	auto configs = getDirs(output_configs_folder);
-
-	// ----- обработка текущего файла
-	std::string is_updated;
-	const std::string curr_config = output_configs_folder + "/" + convertPathToName(curr_parameters[CFG_ENTRY]) + "_" + convertPathToName(curr_parameters[CFG_OUTPUT]);
-	int index = -1;
-	for(int i = 1; i < configs.size(); ++i){
-		if(configs[i] == curr_config){
-			index = i;
-			break;
-		}
-	}
-	if(index == -1)
-		is_updated = "false";
-	else{
-		std::ifstream in(curr_config);
-		std::getline(in, is_updated);
-		in.close();
-	}
-	const std::string objFolder = wd + "/" + SOURCE_DIR + "/" + OBJECTS_DIR; 
-	for(int i = 0; i < curr_toLink.size(); ++i){
-		for(int j = 0; j < toCompile.size(); ++j){
-			if((objFolder + "/" + getName(toCompile[j]) + ".o") == curr_toLink[i]){
-				is_updated = "false";
-				break;
-			}
-		}
-		if(is_updated == "false") break;
-	}
-	bool res = (is_updated == "false");
-
-	// true / false (is up to date)
-	// parameters
-
-	for(int i = 1; i < configs.size(); ++i){
-		if(configs[i] == curr_config) continue;
-		std::string new_is_updated;
-		std::vector<std::string> parameters, allLibs;
-		std::ifstream in(configs[i]);
-		std::getline(in, new_is_updated);
-		std::string line;
-		while(std::getline(in,line)) parameters.push_back(line);
-		in.close();
-
-		// Повреждённый (например, недописанный) output-config пропускаем,
-		// иначе toLinkList обратится к parameters[] за границей вектора.
-		if(parameters.size() < CFG_COUNT) continue;
-
-		std::vector<std::string> toLink = toLinkList(parameters, wd, true, std::vector<std::string>{});
-		for(int i = 0; i < toLink.size(); ++i){
-			for(int j = 0; j < toCompile.size(); ++j){
-				if((objFolder + "/" + getName(toCompile[j]) + ".o") == toLink[i]){
-					new_is_updated = "false";
-					break;
-				}
-			}
-			if(new_is_updated == "false") break;
-		}
-
-		std::ofstream out(configs[i]);
-		out << new_is_updated << std::endl;
-		for(int i = 0; i < parameters.size(); ++i)
-			out << parameters[i] << std::endl;
-		out.close();
-	}
-	return res;
 }

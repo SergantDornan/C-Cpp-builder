@@ -80,7 +80,7 @@ TEST_F(RegistryFixture, StaleEntryRemovalKeepsNextProjectBuildDir) {
 
     std::string dirA = belderBuildDir(a), dirB = belderBuildDir(b);
     ASSERT_FALSE(dirA.empty()); ASSERT_FALSE(dirB.empty());
-    ASSERT_TRUE(std::filesystem::exists(dirB + "/config"));
+    ASSERT_TRUE(std::filesystem::exists(belderLastPairConfig(dirB)));
 
     std::filesystem::remove_all(a); // A исчез
     write("main.cpp", "int main(){return 0;}\n");
@@ -90,7 +90,7 @@ TEST_F(RegistryFixture, StaleEntryRemovalKeepsNextProjectBuildDir) {
     EXPECT_EQ(belderBuildDir(a), "") << "stale entry of A must be removed from registry";
     EXPECT_FALSE(std::filesystem::exists(dirA)) << "build dir of deleted A must be removed: " << dirA;
     EXPECT_EQ(belderBuildDir(b), dirB);
-    EXPECT_TRUE(std::filesystem::exists(dirB + "/config"))
+    EXPECT_TRUE(std::filesystem::exists(belderLastPairConfig(dirB)))
         << "build dir of live project B was removed instead of A's: " << dirB;
 }
 
@@ -136,7 +136,7 @@ TEST_F(RegistryFixture, NewProjectDoesNotReuseLiveIndexAfterClear) {
     EXPECT_NE(dirC, dirB) << "new project got the same build dir as live project B";
 
     // Конфиг B не должен быть перезаписан новым проектом
-    std::string cfgB = readFile(dirB + "/config");
+    std::string cfgB = readFile(belderLastPairConfig(dirB));
     EXPECT_EQ(cfgB.find("fixtureOut"), std::string::npos)
         << "config of project B was overwritten:\n" << cfgB;
 

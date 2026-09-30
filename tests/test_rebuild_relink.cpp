@@ -439,3 +439,40 @@ TEST_F(BelderFixture, ManyOutputFiles3) {
     EXPECT_BELDER_OK(r4, r4.diagnostic());
     EXPECT_TRUE(r4.hasOutput("belder: nothing to link"));
 }
+
+TEST_F(BelderFixture, RebuildTestFileFromFuture) {
+    if (!toolExists("g++")) GTEST_SKIP() << "g++ not found";
+
+    write("func.h", "int func();\n");
+    write("func.cpp",
+        "#include \"func.h\"\n"
+        "int func(){ return 42; }\n"
+    );
+    write("main.cpp",
+        "#include <iostream>\n"
+        "#include \"func.h\"\n"
+        "int main(){\n"
+        "std::cout << func() << std::endl;\n"
+        "return 0;\n"
+        "}\n"
+    );
+
+    auto r1 = runBelder({});
+    EXPECT_BELDER_OK(r1, r1.diagnostic());
+
+    sleep(2);
+    namespace fs = std::filesystem;
+    fs::last_write_time(path("func.h"), fs::file_time_type::clock::now() + std::chrono::hours(1));
+
+    auto r2 = runBelder({});
+    EXPECT_BELDER_OK(r2, r2.diagnostic());
+    EXPECT_TRUE(r2.hasOutput("modification time in the future")) << r2.diagnostic();
+    EXPECT_TRUE(r2.hasOutput("Compiling main.cpp") &&
+                r2.hasOutput("Compiling func.cpp")) << r2.diagnostic();
+    EXPECT_LE(fs::last_write_time(path("func.h")), fs::file_time_type::clock::now());
+
+    auto r3 = runBelder({});
+    EXPECT_BELDER_OK(r3, r3.diagnostic());
+    EXPECT_TRUE(r3.hasOutput("belder: nothing to link")) << r3.diagnostic();
+    EXPECT_FALSE(r3.hasOutput("modification time in the future")) << r3.diagnostic();
+}

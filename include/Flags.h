@@ -10,10 +10,13 @@ static constexpr const char* possibleFlags[] = {"--rebuild", "-reb",
 static constexpr const char* switchFlags[] = {"--compile-flags", "--link-flags"};
 static constexpr const char* keyWords[] = {"run", "status", "help", "config"};
 bool isFlag(const std::string&);
-std::vector<std::string> getParameters(std::vector<std::string>&,
-	const std::string& , const std::string&, const std::string&, bool&, bool&);
+std::vector<std::string> defaultConfig();
+std::vector<std::string> readConfig(const std::string&);
+void writeConfig(const std::string&, const std::vector<std::string>&);
+void getParameters(std::vector<std::string>&, const std::string&,
+	std::vector<std::string>&);
 void getAddDirs(std::vector<std::string>&,const std::string&, std::vector<std::string>&);
-int findEntryFile(const std::vector<std::string>&,
+int findEntryFile(std::vector<std::string>&,
 	const std::string&,  std::vector<std::string>&);
 void getNameAfterFlag(const std::vector<std::string>&,
 	const std::string&,std::string&);

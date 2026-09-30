@@ -1,6 +1,8 @@
 #include <filework.h>
 #include "Process.h"
 #include <cctype>
+#include <fcntl.h>
+#include <sys/file.h>
 std::string getFullPath(const std::string& cd_, const std::string& relpath_)
 {
     std::string cd = cd_;
@@ -13,30 +15,16 @@ std::string getFullPath(const std::string& cd_, const std::string& relpath_)
         std::cerr << std::endl;
         return "-1";
     }
-    bool absolute = (relpath[0] == '/');
-    if(cd[(cd.size()-1)] == '/') cd.erase(cd.end()-1);
+    if(relpath[0] == '/') cd = "";
+    else if(cd[(cd.size()-1)] == '/') cd.erase(cd.end()-1);
     auto s = split(relpath, "/");
     for(int i = 0; i < s.size(); ++i){
-        if(s[i] == ".") {
-            absolute = false;
-            continue;
-        }
-        if(s[i] == ".."){
-            absolute = false;
-            if(getFolder(cd) == ""){
-                std::cerr << "======================== ERROR ========================" << std::endl;
-                std::cerr << "filework.cpp: cannot convert relative path to full path" << std::endl;
-                std::cerr << "Current directory: " << cd_ << std::endl;
-                std::cerr << "relative path: " << relpath_ << std::endl;
-                std::cerr << std::endl;
-                return "-1";
-            }
-            cd = getFolder(cd);
-        }
+        if(s[i] == "" || s[i] == ".") continue;
+        if(s[i] == "..") cd = getFolder(cd);
         else cd += ("/" + s[i]);
     }
-    if(absolute) return relpath_;
-    else return cd;
+    if(cd.empty()) return "/";
+    return cd;
 }
 
 void findFile(std::vector<std::string>& result,
@@ -172,33 +160,26 @@ void appendToFile(const std::string& path, const std::string& s){
         std::cerr << std::endl;
     }
 }
-std::string formatTime(time_t timestamp) {
-    // localtime() возвращает указатель на общий статический буфер и не
-    // потокобезопасен; getChangeTime() вызывается из потоков компиляции,
-    // поэтому используем реентерабельный localtime_r().
-    std::tm timeInfo;
-    if (localtime_r(&timestamp, &timeInfo) == nullptr) {
-        std::cerr << "===================== ERROR =====================" << std::endl;
-        std::cerr << "filework.cpp: formatTime() - some error idk" << std::endl;
-        std::cerr << std::endl;
-        return "";
-    }
-    std::stringstream ss;
-    ss << std::put_time(&timeInfo, "%Y-%m-%d %H:%M:%S");
-    return ss.str();
-}
 std::string getChangeTime(const std::string& path){
-    const char *filename = path.c_str();
     struct stat fileInfo;
-    if (stat(filename, &fileInfo) != 0) {
-        // std::cerr << "===================== ERROR =====================" << std::endl;
-        // std::cerr << "filework.cpp: getChangeTime()" << std::endl;
-        // std::cerr << "Error getting file information: " << filename << std::endl;
-        // std::cerr << std::endl;
-        return "0";
+    if (stat(path.c_str(), &fileInfo) != 0) return "0";
+    return std::to_string(fileInfo.st_mtim.tv_sec) + "." + std::to_string(fileInfo.st_mtim.tv_nsec);
+}
+std::unique_ptr<FILE, int(*)(FILE*)> lockFile(const std::string& path){
+    FILE* file = fopen(path.c_str(), "ae");
+    if(file) flock(fileno(file), LOCK_EX);
+    return std::unique_ptr<FILE, int(*)(FILE*)>(file, fclose);
+}
+bool fixFutureTime(const std::string& path){
+    struct stat fileInfo;
+    if (stat(path.c_str(), &fileInfo) != 0) return false;
+    if (fileInfo.st_mtime <= time(nullptr)) return false;
+    if (utimensat(AT_FDCWD, path.c_str(), nullptr, 0) != 0) {
+        std::cerr << "belder: warning: file " << path << " has modification time in the future and cannot be reset" << std::endl;
+        return false;
     }
-    time_t modificationTime = fileInfo.st_mtime;
-    return formatTime(modificationTime);
+    std::cerr << "belder: warning: file " << path << " had modification time in the future, reset to current time" << std::endl;
+    return true;
 }
 std::string getExt(const std::string& file){
     int index = -1;

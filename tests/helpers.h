@@ -12,6 +12,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <thread>
+#include <algorithm>
 
 #ifndef BELDER_BINARY
 #define BELDER_BINARY "./belder"
@@ -263,6 +264,38 @@ inline std::string readFile(const std::string& path) {
     std::ifstream f(path);
     if (!f) return "";
     return std::string(std::istreambuf_iterator<char>(f), {});
+}
+
+inline std::string belderProjectDir(const std::string& projectDir) {
+    const char* home = getenv("HOME");
+    if (!home) return "";
+    std::ifstream cfg(std::string(home) + "/builder/config");
+    std::string line;
+    while (std::getline(cfg, line)) {
+        auto star = line.rfind('*');
+        if (star == std::string::npos) continue;
+        if (line.substr(0, star) == projectDir)
+            return std::string(home) + "/builder/" + line.substr(star + 1);
+    }
+    return "";
+}
+
+inline std::string belderLastPairConfig(const std::string& buildDir) {
+    std::ifstream last(buildDir + "/last");
+    std::string name;
+    std::getline(last, name);
+    if (name.empty()) return "";
+    return buildDir + "/pairs/" + name + "/config";
+}
+
+inline std::vector<std::string> belderProfileDirs(const std::string& buildDir) {
+    std::vector<std::string> dirs;
+    std::string profiles = buildDir + "/profiles";
+    if (!std::filesystem::is_directory(profiles)) return dirs;
+    for (const auto& entry : std::filesystem::directory_iterator(profiles))
+        if (entry.is_directory()) dirs.push_back(entry.path().string());
+    std::sort(dirs.begin(), dirs.end());
+    return dirs;
 }
 
 // ---------------------------------------------------------------------------

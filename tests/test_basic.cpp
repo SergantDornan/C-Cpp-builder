@@ -520,3 +520,16 @@ TEST_F(BelderFixture, SharedLibraryRpathIsAddedToBinary) {
     EXPECT_TRUE(rd.stdout_str.find(path("plugin")) != std::string::npos)
         << rd.diagnostic("RPATH/RUNPATH should point at the .so directory " + path("plugin"));
 }
+TEST_F(BelderFixture, ReinstallWithoutSourceFolderLinkReportsIt) {
+    if (!toolExists("readelf")) GTEST_SKIP() << "readelf not found";
+    std::string binary = BELDER_BINARY;
+    std::string sourceFolder = std::filesystem::path(binary).parent_path().string();
+    auto rodata = runCommand("readelf -p .rodata '" + binary + "'");
+    if (rodata.stdout_str.find(sourceFolder) != std::string::npos)
+        GTEST_SKIP() << "binary has a source folder link, reinstall would really run";
+
+    auto r = runBelder({"reinstall"});
+    EXPECT_EQ(r.exitCode, 1) << r.diagnostic();
+    EXPECT_TRUE(r.hasOutput("has no link to the source code folder")) << r.diagnostic();
+    EXPECT_TRUE(r.hasOutput("make install")) << r.diagnostic();
+}

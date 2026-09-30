@@ -22,6 +22,8 @@
 #define CFG_FORCE_UNLINK_DIRS 14  // force unlink dirs
 #define CFG_C_STANDARD       15   // C standart
 
-#define CFG_COUNT            16   // общее количество полей в config
+#define CFG_PROFILE          16
+
+#define CFG_COUNT            17   // общее количество полей в config
 
 #endif // BELDER_CONFIG_INDEX_H

@@ -106,9 +106,12 @@ TEST_F(BelderFixture, NoLinkForceAlreadyInNoIncludeList) {
     // Add file to no-link-force, then add again
     auto r1 = runBelder({"--no-link-force", "alpha.cpp", "config"});
     auto r2 = runBelder({"--no-link-force", "alpha.cpp"});
-    // Should handle gracefully (possibly warn or be a no-op)
-    EXPECT_TRUE(r2.exitCode == 0 || r2.hasOutput("already") || r2.hasOutput("ERROR"))
-        << r2.combined();
+    EXPECT_EQ(r2.exitCode, 3) << r2.combined();
+    EXPECT_TRUE(r2.hasOutput("belder: link error")) << r2.combined();
+    auto status = runBelder({"status"});
+    auto first = status.stdout_str.find("alpha.cpp");
+    ASSERT_NE(first, std::string::npos) << status.combined();
+    EXPECT_EQ(status.stdout_str.find("alpha.cpp", first + 1), std::string::npos) << status.combined();
 }
 
 TEST_F(BelderFixture, NoLinkForceStaticLibExtension) {
@@ -217,9 +220,9 @@ TEST_F(BelderFixture, LinkForceAlreadyInNoLinkList) {
     auto r1 = runBelder({"--no-link-force", "util.cpp", "config"});
     // Now try to add to link-force (conflict)
     auto r2 = runBelder({"--link-force", "util.cpp"});
-    // Should either warn about conflict or handle it
-    EXPECT_TRUE(r2.exitCode == 0 || r2.hasOutput("already") || r2.hasOutput("ERROR"))
-        << r2.combined();
+    EXPECT_BELDER_OK(r2, "later --link-force overrides earlier --no-link-force");
+    auto run = runCommand(path("out"));
+    EXPECT_TRUE(run.hasOutput("1")) << run.diagnostic();
 }
 
 // =======================================================================

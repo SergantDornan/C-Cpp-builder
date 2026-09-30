@@ -41,6 +41,17 @@ belder #builder will look for main.cpp or main.c
 
 the builder remembers the latest settings and the entered flags, so if you just enter a command without flags or arguments, the build will go the same way as the last time
 
+every pair "starting file -> output file" has its own config inside one project. If you omit the starting file, the one from the last build is used; if you omit "-o", the output file from the last build is used. A new pair starts with default settings plus the flags from the command, flags for an existing pair change only its config
+```bash
+belder main1.cpp -o out1 -O2 # config of main1.cpp -> out1
+belder main2.cpp -o out2 -g3 # config of main2.cpp -> out2, -O2 is not inherited
+belder main1.cpp -o out1     # builds out1 with -O2 again
+belder main2.cpp             # pair main2.cpp -> out1 (output of the last build)
+```
+object files are shared between configs with the same compilation settings, so building several outputs does not compile the same files twice. "belder status" lists all configs of the project, "belder clear" removes all of them
+
+the output file cannot be a directory, a source file or a header; missing directories of the output path are created. Exit codes: 0 - success or nothing to link, 1 - wrong arguments, 2 - compilation error, 3 - link error (the program is not run after an error)
+
 if you write a "config" right after the "belder" and add flags, then you will simply update the settings without building. Next time, without arguments, the build will go through with these settings.
 ```bash
 belder config --no-link-force file.cpp -lmyLib -o out # just updating config

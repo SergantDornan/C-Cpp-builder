@@ -13,7 +13,7 @@ std::mutex mtx;
 std::vector<std::string> compile(const std::string& wd,const std::vector<std::string>& parameters,
     const bool changeSet, const bool log, const int linkType,
     const std::vector<FileNode>& map, const std::vector<int>& leaves,
-    int numThreads){
+    int numThreads, const std::vector<std::string>& pairSource){
 
     if(numThreads == -1) numThreads = std::thread::hardware_concurrency();
     std::vector<std::string> toCompile;
@@ -26,6 +26,17 @@ std::vector<std::string> compile(const std::string& wd,const std::vector<std::st
     UpdateDependencies(HDdirs, SDdirs, bd, id, map, leaves);
     code |= updateFiles(toCompile, HDdirs, SDdirs); // создание списка toCompile
     if(code != 0) return std::vector<std::string>{};
+    std::vector<std::string> pairDepfiles;
+    for(int i = 0; i < pairSource.size(); ++i)
+        pairDepfiles.push_back(convertPathToName(pairSource[i]));
+    auto it = toCompile.begin();
+    while(it != toCompile.end()){
+        if(find(pairDepfiles, getName(*it)) == -1){
+            markDepfileDirty(*it);
+            it = toCompile.erase(it);
+        }
+        else it++;
+    }
     int m = (toCompile.size() / numThreads) + 1;
     //int m = (toCompile.size()) + 1;
     std::vector<std::thread> threads;

@@ -9,49 +9,45 @@ bool isFlag(const std::string& s){
 	(s.size() >= 3 && s[0] == '-' && s[1] == '-' && s[2] != '-'));	
 }
 
-// Дефолтная раскладка project config (совпадает с тем, что пишет createEssentials).
-static std::vector<std::string> defaultConfig(){
+std::vector<std::string> defaultConfig(){
 	std::vector<std::string> p(CFG_COUNT, "-1");
 	p[CFG_OUTPUT] = "out";
 	p[CFG_COMPILERS] = "default default";
 	return p;
 }
 
-std::vector<std::string> getParameters(std::vector<std::string>& args,
-	const std::string& projectConfig, const std::string& cd,
-	const std::string& prInName, bool& recompile, bool& relink)
-{
-
+std::vector<std::string> readConfig(const std::string& path){
 	std::vector<std::string> parameters;
-	std::ifstream in(projectConfig);
+	std::ifstream in(path);
 	std::string line;
 	while(std::getline(in, line)) parameters.push_back(line);
 	in.close();
+	if(parameters.size() == CFG_PROFILE) parameters.push_back("-1");
 
 	// Config мог быть повреждён (оборванная запись при прерывании belder,
 	// переполнение диска, ручная правка). Без восстановления обращения к
-	// parameters[0..CFG_COUNT-1] ниже уходят за границы вектора -> segfault.
+	// parameters[0..CFG_COUNT-1] уходят за границы вектора -> segfault.
 	if(parameters.size() < (size_t)CFG_COUNT)
 		parameters = defaultConfig();
 	// Поле компиляторов обязано содержать ровно 2 токена (C и C++);
 	// иначе split(...)[1] в компиляции/линковке выходит за границу.
 	if(split(parameters[CFG_COMPILERS]).size() < 2)
 		parameters[CFG_COMPILERS] = "default default";
+	return parameters;
+}
 
-	auto pr_parameters = parameters;
+void writeConfig(const std::string& path, const std::vector<std::string>& parameters){
+	std::ofstream out(path);
+	for(int i = 0; i < parameters.size(); ++i) out << parameters[i] << std::endl;
+	out.close();
+}
 
+void getParameters(std::vector<std::string>& args, const std::string& cd,
+	std::vector<std::string>& parameters)
+{
 	bool clearFlags = (find(args, "--clear-flags") != -1 || find(args, "--clean-flags") != -1 ||
 		find(args, "--flags-clear") != -1 || find(args, "--flags-clean") != -1);
 	bool clearOptions = (find(args, "--clean-options") != -1 || find(args, "--clear-options") != -1);
-	bool isFoundEntry = (findEntryFile(args,cd, parameters) == 0);
-
-	if(prInName != parameters[CFG_ENTRY] && prInName != "-1" && isFoundEntry){
-		std::cout << std::endl;
-		std::cout << "------- Change of entry file, clearing all old options -------" << std::endl;
-		std::cout << std::endl;
-		clearOptions = true;
-		//clearFlags = true;
-	}
 
 	if(clearFlags || clearOptions)
 	{
@@ -100,29 +96,7 @@ std::vector<std::string> getParameters(std::vector<std::string>& args,
 	parameters[CFG_COMPILERS] = "";
 	for(int i = 0; i < compilers.size(); ++i)
 		parameters[CFG_COMPILERS] += (compilers[i] + " ");
-	getNameAfterFlag(args, "-o", parameters[CFG_OUTPUT]);
-	if(getFolder(parameters[CFG_OUTPUT]) == "")
-		parameters[CFG_OUTPUT] = (cd + "/" + parameters[CFG_OUTPUT]);
 
-	int compile_sensitive_options[7] = {CFG_COMPILERS, CFG_CXX_STANDARD, CFG_OPT,
-		CFG_DEBUG, CFG_COMPILE_FLAGS, CFG_GENERAL_FLAGS, CFG_C_STANDARD};
-	int link_sensitive_options[5] = {CFG_FORCE_LINK_LIBS, CFG_FORCE_LINK,
-		CFG_FORCE_UNLINK, CFG_LINK_FLAGS, CFG_FORCE_UNLINK_LIBS};
-
-	for(int i = 0; i < 7; ++i){
-		if(parameters[compile_sensitive_options[i]] != pr_parameters[compile_sensitive_options[i]]) {
-			recompile = true;
-			break;
-		}
-	}
-
-	for(int i = 0; i < 5; ++i){
-		if(parameters[link_sensitive_options[i]] != pr_parameters[link_sensitive_options[i]]){
-			relink = true;
-			break;
-		}
-	}
-	return parameters;
 }
 bool isStandart(const std::string& s){
 	return (s.size() >= 5 && std::string(s.begin(), s.begin() + 5) == "-std=");
@@ -134,25 +108,16 @@ bool isOpt(const std::string& s){
 	return (s.size() == 3 && s[0] == '-' && s[1] == 'O');
 }
 void getSpecFlags(std::vector<std::string>& args, std::string& s, const std::string& switchFlag){
-	auto it = args.begin();
-	bool get = false;
+	auto it = std::find(args.begin(), args.end(), switchFlag);
+	if(it == args.end()) return;
+	it = args.erase(it);
 	std::string s0 = "-1";
-	while(it != args.end()){
-		if(*it == switchFlag){
-			get = true;
-			args.erase(it);
-			continue;
-		}
-		if(find(switchFlags, *it) != -1)
-			break;
-		if(!get || find(keyWords, (*it)) != -1 || find(possibleFlags, (*it)) != -1){
-			it++;
-			continue;
-		}
+	while(it != args.end() && find(switchFlags, *it) == -1 &&
+		find(possibleFlags, *it) == -1 && find(keyWords, *it) == -1)
+	{
 		if(s0 == "-1") s0 = "";
-		//if(s.find(*it) == std::string::npos)
-			s0 += ((*it) + " ");
-		args.erase(it);
+		s0 += ((*it) + " ");
+		it = args.erase(it);
 	}
 	s = s0;
 }
@@ -216,52 +181,54 @@ void getAddDirs(std::vector<std::string>& args,const std::string& cd, std::vecto
 }
 
 
-int findEntryFile(const std::vector<std::string>& args,
+int findEntryFile(std::vector<std::string>& args,
 	const std::string& cd, std::vector<std::string>& parameters){
 
 	std::vector<std::string> AddInc, fUnInc;
 	if(parameters[CFG_ADD_INCLUDE] != "-1") AddInc = split(parameters[CFG_ADD_INCLUDE]);
 	if(parameters[CFG_FORCE_UNLINK_DIRS] != "-1") fUnInc = split(parameters[CFG_FORCE_UNLINK_DIRS]);
-	if(args.size() != 0 && (find(keyWords, args[0]) == -1) && !isFlag(args[0])){
+	int pos = 0;
+	while(pos < args.size() && find(keyWords, args[pos]) != -1) ++pos;
+	if(pos < args.size() && !isFlag(args[pos])){
 		std::vector<std::string> mainFile;
-		findFile(mainFile, args[0], cd, AddInc, fUnInc);
+		findFile(mainFile, args[pos], cd, AddInc, fUnInc);
 		if(mainFile.size() == 0){
 			std::cerr << "================== ERROR ==================" << std::endl;
-			std::cerr << "Cannot find file: " << args[0] << std::endl;
+			std::cerr << "Cannot find file: " << args[pos] << std::endl;
 			return 1;
 		}
 		else if(mainFile.size() > 1){
 			std::cerr << "================== ERROR ==================" << std::endl;
-			std::cerr << "multiple files matching \"" << args[0] << "\" found:" << std::endl;
+			std::cerr << "multiple files matching \"" << args[pos] << "\" found:" << std::endl;
 			for(int i = 0; i < mainFile.size(); ++i)
 				std::cerr << '\t' << mainFile[i] << std::endl;
 			return 1; 
 		}
 		parameters[CFG_ENTRY] = mainFile[0];
+		args.erase(args.begin() + pos);
+		return 0;
 	}
-	if(args.size() == 0 || (args.size() != 0 && (isFlag(args[0]) || find(keyWords, args[0]) != -1))){
-		if(parameters[CFG_ENTRY] == "-1"){
-			std::vector<std::string> mainFile;
-			std::string s0 = "main.cpp";
+	if(parameters[CFG_ENTRY] == "-1"){
+		std::vector<std::string> mainFile;
+		std::string s0 = "main.cpp";
+		findFile(mainFile, s0, cd, AddInc, fUnInc);
+		if(mainFile.size() == 0) {
+			s0 = "main.c";
 			findFile(mainFile, s0, cd, AddInc, fUnInc);
-			if(mainFile.size() == 0) {
-				s0 = "main.c";
-				findFile(mainFile, s0, cd, AddInc, fUnInc);
-			}
-			if(mainFile.size() == 0){
-				std::cerr << "================== ERROR ==================" << std::endl;
-				std::cerr << "Cannot find entry file" << std::endl;
-				return 1;
-			}
-			else if(mainFile.size() > 1){
-				std::cerr << "================== ERROR ==================" << std::endl;
-				std::cerr << "multiple files matching \"" << s0 << "\" found:" << std::endl;
-				for(int i = 0; i < mainFile.size(); ++i)
-					std::cerr << '\t' << mainFile[i] << std::endl;
-				return 1; 
-			}
-			parameters[CFG_ENTRY] = mainFile[0];
 		}
+		if(mainFile.size() == 0){
+			std::cerr << "================== ERROR ==================" << std::endl;
+			std::cerr << "Cannot find entry file" << std::endl;
+			return 1;
+		}
+		else if(mainFile.size() > 1){
+			std::cerr << "================== ERROR ==================" << std::endl;
+			std::cerr << "multiple files matching \"" << s0 << "\" found:" << std::endl;
+			for(int i = 0; i < mainFile.size(); ++i)
+				std::cerr << '\t' << mainFile[i] << std::endl;
+			return 1; 
+		}
+		parameters[CFG_ENTRY] = mainFile[0];
 	}
 	return 0;
 }
@@ -424,6 +391,7 @@ void FindForceLinkUnlink(std::vector<std::string>& args,const std::string& cd,
 		}
 		else it++;
 	}
+	const auto oldLink = fLink, oldUnlink = fUnlink, oldLibs = fLibs, oldUnLibs = fUnLibs;
 	for(int i = 0; i < newv.size(); ++i){
 		if(i < newfLinkSize){
 			if(isLib(newv[i])){
@@ -468,6 +436,13 @@ void FindForceLinkUnlink(std::vector<std::string>& args,const std::string& cd,
 			}
 		}
 	}
+
+	const auto newLink = fLink - oldLink, newUnlink = fUnlink - oldUnlink;
+	const auto newLibs = fLibs - oldLibs, newUnLibs = fUnLibs - oldUnLibs;
+	fUnlink -= (newLink - newUnlink);
+	fLink -= (newUnlink - newLink);
+	fUnLibs -= (newLibs - newUnLibs);
+	fLibs -= (newUnLibs - newLibs);
 
 	fLink -= defLink;
 	fLink -= fUnlink;

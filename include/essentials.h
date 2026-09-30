@@ -1,3 +1,3 @@
 #include "BuilderFilework.h"
-std::string createEssentials(const bool);
+std::string createEssentials();
 void removeBuildFolder(const std::string&, bool);

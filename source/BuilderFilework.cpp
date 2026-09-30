@@ -5,12 +5,18 @@ std::string cd = cwd();
 const bool pocket = (root == "./builder");
 
 std::string convertPathToName(const std::string& path, const char ch){
-    std::string result = path;
-    if(result[0] == '/') result.erase(result.begin());
-    for(int i = 0; i < result.size(); ++i){
-        if(result[i] == '/') result[i] = ch;
+    std::string result;
+    for(int i = (!path.empty() && path[0] == '/') ? 1 : 0; i < path.size(); ++i){
+        if(path[i] == '/') result += ch;
+        else if(path[i] == ch || path[i] == '%') result += std::string("%") + path[i];
+        else result += path[i];
     }
     return result;
+}
+
+bool isSourceFile(const std::string& path){
+    std::string ext = getExt(path);
+    return (ext == "c" || ext == "cpp" || ext == "asm" || ext == "s" || ext == "S");
 }
 
 void getAllheaders(std::vector<std::string>& headers,const std::string& path,
@@ -47,9 +53,7 @@ void getAllsource(std::vector<std::string>& source, const std::string& path,
         } catch (const std::filesystem::filesystem_error& e) {
             continue;
         }
-        std::string ext = getExt(dirs[i]);
-        if((ext == "c" || ext == "cpp" || ext == "asm" || ext == "s" || ext == "S") &&
-            find(source, dirs[i]) == -1) source.push_back(dirs[i]);
+        if(isSourceFile(dirs[i]) && find(source, dirs[i]) == -1) source.push_back(dirs[i]);
         try {
             if(std::filesystem::is_directory(dirs[i]) && find(fUnIncludeDirs, dirs[i]) == -1)
                 getAllsource(source, dirs[i],forceUnlink,fUnIncludeDirs);

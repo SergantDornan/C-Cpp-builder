@@ -22,9 +22,19 @@ protected:
     }
 
     void cleanupBelder(const std::string& path) {
-        std::string stateDir = std::string(getenv("HOME")) + "/.builder";
-        system(("rm -rf " + stateDir + " 2>/dev/null || true").c_str());
-        system(("rm -rf " + path + " 2>/dev/null || true").c_str());
+        if (path.empty()) return;
+        std::vector<std::string> dirs = {path};
+        for (const auto& entry : std::filesystem::directory_iterator(path))
+            if (entry.is_directory()) dirs.push_back(entry.path().string());
+        for (const auto& dir : dirs)
+            runCommandInDir(std::string(BELDER_BINARY) + " silent_clear", dir);
+        std::filesystem::remove_all(path);
+    }
+
+    void expectRuns(const std::string& expected) {
+        auto run = runCommandInDir(tempDir + "/test_exe", tempDir);
+        EXPECT_EQ(run.exitCode, 0) << run.diagnostic();
+        EXPECT_TRUE(run.hasOutput(expected)) << run.diagnostic();
     }
 };
 
@@ -70,12 +80,13 @@ TEST_F(BelderARParsingFixture, BuildCustomStaticArchive) {
     }
 
     auto result = runCommandInDir(
-        std::string(BELDER_BINARY) + " main.cpp --link-force " + libdir + "/libhelper.a -o test_exe",
+        std::string(BELDER_BINARY) + " main.cpp --link-force " + libdir + "/libhelper.a --no-link-force helper.cpp -o test_exe",
         tempDir
     );
 
     EXPECT_BELDER_OK(result, "Link with custom static archive")
         << result.diagnostic("Should parse and link custom archive successfully");
+    expectRuns("5");
 }
 
 TEST_F(BelderARParsingFixture, ParseSystemLibC) {
@@ -136,12 +147,13 @@ TEST_F(BelderARParsingFixture, BuildLargeStaticArchive) {
     }
 
     auto result = runCommandInDir(
-        std::string(BELDER_BINARY) + " main.cpp --link-force " + libdir + "/libbig.a -o test_exe",
+        std::string(BELDER_BINARY) + " main.cpp --link-force " + libdir + "/libbig.a --no-link-force biglib/main.cpp -o test_exe",
         tempDir
     );
 
     EXPECT_BELDER_OK(result, "Parse archive with multiple functions")
         << result.diagnostic("Archive parsing should not crash with complex libraries");
+    expectRuns("0 9");
 }
 
 TEST_F(BelderARParsingFixture, RebuildWithStaticArchive) {
@@ -169,10 +181,11 @@ TEST_F(BelderARParsingFixture, RebuildWithStaticArchive) {
     }
 
     auto result1 = runCommandInDir(
-        std::string(BELDER_BINARY) + " main.cpp --link-force " + libdir + "/libutil.a -o test_exe",
+        std::string(BELDER_BINARY) + " main.cpp --link-force " + libdir + "/libutil.a --no-link-force util.cpp -o test_exe",
         tempDir
     );
     EXPECT_BELDER_OK(result1, "First build with archive");
+    expectRuns("30");
 
     {
         std::ofstream out(main_cpp);
@@ -182,11 +195,12 @@ TEST_F(BelderARParsingFixture, RebuildWithStaticArchive) {
     }
 
     auto result2 = runCommandInDir(
-        std::string(BELDER_BINARY) + " main.cpp --link-force " + libdir + "/libutil.a -o test_exe",
+        std::string(BELDER_BINARY) + " main.cpp --link-force " + libdir + "/libutil.a --no-link-force util.cpp -o test_exe",
         tempDir
     );
     EXPECT_BELDER_OK(result2, "Rebuild after main modification")
         << result2.diagnostic("Should relink with archive without crashing");
+    expectRuns("result: 56");
 }
 
 TEST_F(BelderARParsingFixture, MultipleLibrariesImportedSymbols) {
@@ -210,11 +224,11 @@ TEST_F(BelderARParsingFixture, MultipleLibrariesImportedSymbols) {
     }
 
     auto compile1 = runCommandInDir(
-        std::string(BELDER_BINARY) + " mylib1.cpp -o mylib1.a",
+        std::string(BELDER_BINARY) + " mylib1.cpp -o libmylib1.a",
         lib1_dir
     );
     auto compile2 = runCommandInDir(
-        std::string(BELDER_BINARY) + " mylib2.cpp -o mylib2.a",
+        std::string(BELDER_BINARY) + " mylib2.cpp -o libmylib2.a",
         lib2_dir
     );
     ASSERT_BELDER_OK(compile1, "Compile lib1 with strlen import");
@@ -233,10 +247,11 @@ TEST_F(BelderARParsingFixture, MultipleLibrariesImportedSymbols) {
     }
 
     auto result = runCommandInDir(
-        std::string(BELDER_BINARY) + " main.cpp --link-force " + lib1_dir + "/mylib1.a " + lib2_dir + "/mylib2.a -o test_exe",
+        std::string(BELDER_BINARY) + " main.cpp --link-force " + lib1_dir + "/libmylib1.a " + lib2_dir + "/libmylib2.a --no-link-force mylib1.cpp mylib2.cpp -o test_exe",
         tempDir
     );
 
     EXPECT_BELDER_OK(result, "Link multiple libraries with imported strlen")
         << result.diagnostic("Multiple libraries importing strlen should NOT cause conflict - strlen is imported, not defined");
+    expectRuns("4 1");
 }

@@ -112,14 +112,14 @@ TEST_F(BelderFixture, TruncatedProjectConfigDoesNotCrash) {
     ASSERT_FALSE(bdir.empty()) << "could not locate build dir under ~/builder";
 
     // Обрезаем config до одной строки (имитация недописанной записи).
-    writeLines(bdir + "/config", {"-1"});
+    writeLines(belderLastPairConfig(bdir), {"-1"});
 
     auto r = runBelder({"main.cpp", "-o", "out"});
     EXPECT_NE(r.exitCode, -1)
         << "belder crashed building with a truncated config" << r.diagnostic();
 
     // status тоже ходит через чтение config.
-    writeLines(bdir + "/config", {"-1"});
+    writeLines(belderLastPairConfig(bdir), {"-1"});
     auto rs = runBelder({"status"});
     EXPECT_NE(rs.exitCode, -1)
         << "belder crashed on 'status' with a truncated config" << rs.diagnostic();
@@ -133,12 +133,12 @@ TEST_F(BelderFixture, MalformedCompilersFieldDoesNotCrash) {
     std::string bdir = belderBuildDir(tmpDir);
     ASSERT_FALSE(bdir.empty()) << "could not locate build dir under ~/builder";
 
-    auto lines = readLines(bdir + "/config");
+    auto lines = readLines(belderLastPairConfig(bdir));
     ASSERT_GE(lines.size(), 6u);
     // Поле компиляторов (индекс 5 = 6-я строка) должно содержать 2 токена.
     // Ломаем: оставляем один токен -> split(...)[1] раньше падал.
     lines[5] = "default";
-    writeLines(bdir + "/config", lines);
+    writeLines(belderLastPairConfig(bdir), lines);
 
     auto r = runBelder({"main.cpp", "-o", "out"});
     EXPECT_NE(r.exitCode, -1)
@@ -160,7 +160,9 @@ TEST_F(BelderFixture, CorruptSymCacheDoesNotCrash) {
     std::string bdir = belderBuildDir(tmpDir);
     ASSERT_FALSE(bdir.empty()) << "could not locate build dir under ~/builder";
 
-    std::string symDir = bdir + "/sym";
+    auto profiles = belderProfileDirs(bdir);
+    ASSERT_EQ(profiles.size(), 1u);
+    std::string symDir = profiles[0] + "/sym";
     ASSERT_TRUE(std::filesystem::exists(symDir));
 
     // Портим каждый .sym, СОХРАНЯЯ первые две строки (путь + время изменения),

@@ -90,6 +90,7 @@ void UpdateDependencies(const std::vector<std::string>& HDdirs,
         std::string line;
         while(std::getline(file,line)) v.push_back(line);
         file.close();
+        fixFutureTime(v[0]);
         if(getChangeTime(v[0]) != v[1]) changedFiles.push_back(v[0]);
         std::vector<std::string> inc1, inc2, inc3;
         if(v[2] != "-1") inc1 = split(v[2]);
@@ -107,6 +108,7 @@ void UpdateDependencies(const std::vector<std::string>& HDdirs,
             data[changedFiles[i]][0] = includes;
             data[changedFiles[i]][2] = Ilist;
             for(int j = 0; j < changes.size(); ++j){
+                if(data.find(changes[j].first) == data.end()) continue;
                 if(find(addChangedFiles, changes[j].first) == -1) addChangedFiles.push_back(changes[j].first);
                 std::string pathToDepfile;
                 if(getExt(changedFiles[i]) == "h" || getExt(changedFiles[i]) == "hpp")
@@ -160,6 +162,26 @@ void UpdateDependencies(const std::vector<std::string>& HDdirs,
 }
 
 
+static bool isValidDepfile(const std::string& path){
+    std::ifstream file(path);
+    std::string line;
+    int lines = 0;
+    while(lines < 5 && std::getline(file, line)) ++lines;
+    return lines == 5;
+}
+
+static void markDependentsDirty(const std::string& path){
+    std::vector<std::string> lines;
+    std::string line;
+    std::ifstream file(path);
+    while(std::getline(file, line)) lines.push_back(line);
+    file.close();
+    if(lines.size() < 4 || lines[3] == "-1") return;
+    auto dependents = split(lines[3]);
+    for(int i = 0; i < dependents.size(); ++i)
+        if(dependents[i] != path) markDepfileDirty(dependents[i]);
+}
+
 bool createDepfiles(const std::string& wd,
 	const std::vector<std::string>& allHeaders, 
 	const std::vector<std::string>& allSource,
@@ -177,8 +199,10 @@ bool createDepfiles(const std::string& wd,
 		std::string line;
 		std::getline(file, line);
 		file.close();
-        if(find(allSource, line) == -1){
+        if(find(allSource, line) == -1 || !isValidDepfile(dirs[i]) ||
+            getName(dirs[i]) != convertPathToName(line)){
 			changeSet = true;
+            markDependentsDirty(dirs[i]);
 			std::string objFile = wd + "/" + SOURCE_DIR + "/" + OBJECTS_DIR + "/" + getName(dirs[i]) + ".o";
 			std::string symFile = wd + "/" + SYM_DIR + "/" + getName(dirs[i]) + ".sym";
             files_to_remove.push_back(dirs[i]);
@@ -194,8 +218,10 @@ bool createDepfiles(const std::string& wd,
 		std::string line;
 		std::getline(file, line);
 		file.close();
-        if(find(allHeaders, line) == -1){
+        if(find(allHeaders, line) == -1 || !isValidDepfile(dirs[i]) ||
+            getName(dirs[i]) != convertPathToName(line)){
 			changeSet = true;
+            markDependentsDirty(dirs[i]);
             files_to_remove.push_back(dirs[i]);
 		}
 	}
@@ -233,29 +259,17 @@ bool createDepfiles(const std::string& wd,
 }
 
 
-void rebuildForSharedLib(const std::string& n1, const std::string& n2,
-    const std::string& wd){
-
-    auto isSharedLib = [](const std::string& s0){
-        return getLibType(s0) == "so";
-    };
-
-    if((!isSharedLib(n1) && isSharedLib(n2)) || 
-        (isSharedLib(n1) && !isSharedLib(n2)))
-    {
-        std::string dir = wd + "/" + SOURCE_DIR + "/" + DEPS_DIR;
-        std::vector<std::string> files_to_remove;
-        auto dirs = getDirs(dir);
-        for(int i = 1; i < dirs.size(); ++i)
-            files_to_remove.push_back(dirs[i]);
-        dirs = getDirs(wd + "/" + SYM_DIR);
-        for(int i = 1; i < dirs.size(); ++i)
-            files_to_remove.push_back(dirs[i]);
-        dirs = getDirs(wd + "/" + SOURCE_DIR + "/" + OBJECTS_DIR);
-        for(int i = 1; i < dirs.size(); ++i)
-            files_to_remove.push_back(dirs[i]);
-        removeFiles(files_to_remove);
-    }
+void markDepfileDirty(const std::string& path){
+    std::vector<std::string> lines;
+    std::string line;
+    std::ifstream in(path);
+    while(std::getline(in, line)) lines.push_back(line);
+    in.close();
+    if(lines.size() < 2 || lines[1] == "-1") return;
+    lines[1] = "-1";
+    std::ofstream out(path);
+    for(int i = 0; i < lines.size(); ++i) out << lines[i] << std::endl;
+    out.close();
 }
 
 // Структура файла с символами:
@@ -267,7 +281,7 @@ void rebuildForSharedLib(const std::string& n1, const std::string& n2,
 // callSyms
 // defSyms
 
-void updateSymfiles(const std::string& wd, const std::vector<std::string>& allLibs){
+void updateSymfiles(const std::string& wd){
 
     auto isLib = [](const std::string& s0){
         return getLibType(s0) != "";
@@ -283,7 +297,7 @@ void updateSymfiles(const std::string& wd, const std::vector<std::string>& allLi
         std::getline(file, changeTime);
         file.close();
         bool del = false;
-        if(isLib(path)) del |= (find(allLibs, path) == -1);
+        if(isLib(path)) del |= !exists(path);
         else del |= (find(allObj, path) == -1);
         if(!del) del |= (getChangeTime(path) != changeTime);
         if(del) files_to_remove.push_back(dirs[i]);

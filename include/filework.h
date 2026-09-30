@@ -12,6 +12,8 @@
 #include <time.h>
 #include <iomanip>
 #include <sstream>
+#include <memory>
+#include <cstdio>
 #include "algs.h"
 std::vector<std::string> getDirs(const std::string&); 
 // Выдает список файлов и папок, аналогично ls, только путь полный относительно папки, 
@@ -34,8 +36,9 @@ std::string getFolder(const std::string&);
 std::string getLibType(const std::string&);
 std::string getHomedir();
 void appendToFile(const std::string&, const std::string&);
-std::string formatTime(time_t timestamp);
 std::string getChangeTime(const std::string&);
+bool fixFutureTime(const std::string&);
+std::unique_ptr<FILE, int(*)(FILE*)> lockFile(const std::string&);
 std::string getNameNoExt(const std::string&);
 void findFile(std::vector<std::string>&,
 	const std::string&,const std::string&,
