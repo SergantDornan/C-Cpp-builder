@@ -3,6 +3,7 @@
 // Note: '--default-include' is the actual flag name in belder (intentional typo)
 
 #include "helpers.h"
+#include "../include/ConfigIndex.h"
 
 // =======================================================================
 // -I directory tests
@@ -277,4 +278,139 @@ TEST_F(BelderFixture, defaultIncludeMultipleDirs) {
     EXPECT_EQ(r.exitCode, 0) << "--default-include multiple dirs: " << r.combined();
     auto r2 = runBelder({"status"});
     EXPECT_TRUE(!r2.hasOutput(da) && !r2.hasOutput(db)) << "status shoud not have " << da << " " << db << " output" << std::endl;
+}
+
+// =======================================================================
+// -I <dir> (separated by space)
+// =======================================================================
+
+namespace {
+
+std::vector<std::string> pairConfigLines(const std::string& projectDir) {
+    std::vector<std::string> lines;
+    std::ifstream in(belderLastPairConfig(belderProjectDir(projectDir)));
+    std::string line;
+    while (std::getline(in, line)) lines.push_back(line);
+    return lines;
+}
+
+}
+
+TEST_F(BelderFixture, IFlagSeparatedAbsoluteDir) {
+    if (!toolExists("g++")) GTEST_SKIP() << "g++ not found";
+    std::string ext = tmpDir + "_sep_headers";
+    makeDir(ext);
+    writeFile(ext + "/sep.h", "#define SEP_VALUE 314\n");
+    write("main.cpp",
+          "#include \"sep.h\"\n"
+          "#include <iostream>\n"
+          "int main(){std::cout<<\"_sep_\"<<SEP_VALUE<<std::endl;return 0;}\n");
+
+    auto r = runBelder({"-I", ext, "run"});
+    std::filesystem::remove_all(ext);
+    EXPECT_BELDER_OK(r, r.diagnostic());
+    EXPECT_TRUE(r.hasOutput("_sep_314")) << r.diagnostic();
+}
+
+TEST_F(BelderFixture, IFlagSeparatedRelativeDirWithSources) {
+    if (!toolExists("g++")) GTEST_SKIP() << "g++ not found";
+    std::string ext = tmpDir + "_sep_lib";
+    makeDir(ext);
+    writeFile(ext + "/extlib.h", "int ext_value();\n");
+    writeFile(ext + "/extlib.cpp", "#include \"extlib.h\"\nint ext_value(){ return 271; }\n");
+    write("main.cpp",
+          "#include \"extlib.h\"\n"
+          "#include <iostream>\n"
+          "int main(){std::cout<<\"_ext_\"<<ext_value()<<std::endl;return 0;}\n");
+
+    auto r = runBelder({"main.cpp", "-I", "../" + std::filesystem::path(ext).filename().string(), "run"});
+    auto lines = pairConfigLines(tmpDir);
+    std::filesystem::remove_all(ext);
+    EXPECT_BELDER_OK(r, r.diagnostic());
+    EXPECT_TRUE(r.hasOutput("_ext_271")) << r.diagnostic();
+    ASSERT_EQ(lines.size(), (size_t)CFG_COUNT);
+    EXPECT_EQ(lines[CFG_ADD_INCLUDE], ext + " ");
+}
+
+TEST_F(BelderFixture, IFlagSeparatedPathIsNotStoredAsFlagOrEntry) {
+    if (!toolExists("g++")) GTEST_SKIP() << "g++ not found";
+    write("inc/value.h", "#define VALUE 5\n");
+    write("main.cpp",
+          "#include \"value.h\"\n"
+          "#include <iostream>\n"
+          "int main(){std::cout<<\"_v_\"<<VALUE<<std::endl;return 0;}\n");
+
+    auto r = runBelder({"main.cpp", "-I", "inc", "-O2", "run"});
+    EXPECT_BELDER_OK(r, r.diagnostic());
+    EXPECT_TRUE(r.hasOutput("_v_5")) << r.diagnostic();
+    auto lines = pairConfigLines(tmpDir);
+    ASSERT_EQ(lines.size(), (size_t)CFG_COUNT);
+    EXPECT_EQ(lines[CFG_ENTRY], tmpDir + "/main.cpp");
+    EXPECT_EQ(lines[CFG_ADD_INCLUDE], tmpDir + "/inc ");
+    EXPECT_EQ(lines[CFG_OPT], "-O2");
+    EXPECT_EQ(lines[CFG_GENERAL_FLAGS], "-1");
+    EXPECT_EQ(lines[CFG_COMPILE_FLAGS], "-1");
+    EXPECT_EQ(lines[CFG_LINK_FLAGS], "-1");
+}
+
+TEST_F(BelderFixture, IFlagSeparatedAndJoinedFormsAreTheSame) {
+    if (!toolExists("g++")) GTEST_SKIP() << "g++ not found";
+    write("inc/value.h", "#define VALUE 6\n");
+    write("main.cpp",
+          "#include \"value.h\"\n"
+          "#include <iostream>\n"
+          "int main(){std::cout<<\"_v_\"<<VALUE<<std::endl;return 0;}\n");
+
+    ASSERT_BELDER_OK(runBelder({"-I", "inc"}), "separated form");
+    auto first = pairConfigLines(tmpDir);
+    auto r = runBelder({"-Iinc", "run"});
+    EXPECT_BELDER_OK(r, r.diagnostic());
+    EXPECT_TRUE(r.hasOutput("nothing to link")) << r.diagnostic();
+    EXPECT_TRUE(r.hasOutput("_v_6")) << r.diagnostic();
+    EXPECT_EQ(pairConfigLines(tmpDir), first);
+    EXPECT_EQ(belderProfileDirs(belderProjectDir(tmpDir)).size(), 1u);
+}
+
+TEST_F(BelderFixture, IFlagSeparatedSeveralDirs) {
+    if (!toolExists("g++")) GTEST_SKIP() << "g++ not found";
+    write("incA/a.h", "#define A 1\n");
+    write("incB/b.h", "#define B 2\n");
+    write("main.cpp",
+          "#include \"a.h\"\n#include \"b.h\"\n"
+          "#include <iostream>\n"
+          "int main(){std::cout<<\"_ab_\"<<A<<B<<std::endl;return 0;}\n");
+
+    auto r = runBelder({"-I", "incA", "-IincB", "run"});
+    EXPECT_BELDER_OK(r, r.diagnostic());
+    EXPECT_TRUE(r.hasOutput("_ab_12")) << r.diagnostic();
+    auto lines = pairConfigLines(tmpDir);
+    ASSERT_EQ(lines.size(), (size_t)CFG_COUNT);
+    EXPECT_NE(lines[CFG_ADD_INCLUDE].find(tmpDir + "/incA "), std::string::npos);
+    EXPECT_NE(lines[CFG_ADD_INCLUDE].find(tmpDir + "/incB "), std::string::npos);
+}
+
+TEST_F(BelderFixture, IFlagSeparatedNonExistentDirFails) {
+    if (!toolExists("g++")) GTEST_SKIP() << "g++ not found";
+    write("main.cpp", simpleCppMain());
+
+    auto r = runBelder({"-I", "/tmp/belder_nonexistent_include_dir_xyz"});
+    EXPECT_NE(r.exitCode, 0) << r.diagnostic();
+    EXPECT_TRUE(r.hasOutput("does not exist")) << r.diagnostic();
+}
+
+TEST_F(BelderFixture, IFlagWithoutDirFails) {
+    if (!toolExists("g++")) GTEST_SKIP() << "g++ not found";
+    write("main.cpp", simpleCppMain());
+    ASSERT_BELDER_OK(runBelder({"-O2"}), "initial build");
+    auto before = pairConfigLines(tmpDir);
+
+    for (const auto& args : std::vector<std::vector<std::string>>{
+             {"-I"}, {"-I", "--rebuild"}, {"-I", "-O3"}, {"-I", "run"}, {"main.cpp", "-I"}}) {
+        auto r = runBelder(args);
+        EXPECT_EQ(r.exitCode, 1) << r.diagnostic();
+        EXPECT_TRUE(r.hasOutput("no directory after -I flag")) << r.diagnostic();
+        EXPECT_EQ(pairConfigLines(tmpDir), before);
+    }
+    auto r = runBelder({"run"});
+    EXPECT_BELDER_OK(r, r.diagnostic());
 }

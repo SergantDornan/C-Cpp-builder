@@ -176,7 +176,7 @@ int main(int argc, char* argv[]){
 	std::string pairConfig = pairDir + "/" + CONFIG_FILE;
 	std::vector<std::string> parameters = readConfig(pairConfig);
 	std::vector<std::string> previousParameters = parameters;
-	getParameters(args, cd, parameters);
+	if(getParameters(args, cd, parameters) != 0) return 1;
 	if(profileKey(parameters) != profileKey(previousParameters)) parameters[CFG_PROFILE] = "-1";
 	if(parameters != previousParameters) removeFile(pairDir + "/" + LINK_RECORD_FILE);
 	writeConfig(pairConfig, parameters);

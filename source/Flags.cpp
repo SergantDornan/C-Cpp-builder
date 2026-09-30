@@ -42,7 +42,7 @@ void writeConfig(const std::string& path, const std::vector<std::string>& parame
 	out.close();
 }
 
-void getParameters(std::vector<std::string>& args, const std::string& cd,
+int getParameters(std::vector<std::string>& args, const std::string& cd,
 	std::vector<std::string>& parameters)
 {
 	bool clearFlags = (find(args, "--clear-flags") != -1 || find(args, "--clean-flags") != -1 ||
@@ -84,7 +84,7 @@ void getParameters(std::vector<std::string>& args, const std::string& cd,
 		else
 			it++;
 	}
-	getAddDirs(args,cd, parameters);
+	if(getAddDirs(args,cd, parameters) != 0) return 1;
 	getSpecFlags(args, parameters[CFG_COMPILE_FLAGS], "--compile-flags");
 	getSpecFlags(args, parameters[CFG_LINK_FLAGS], "--link-flags");
 	// Следующая функция может насрать в Link flags!!!
@@ -96,7 +96,7 @@ void getParameters(std::vector<std::string>& args, const std::string& cd,
 	parameters[CFG_COMPILERS] = "";
 	for(int i = 0; i < compilers.size(); ++i)
 		parameters[CFG_COMPILERS] += (compilers[i] + " ");
-
+	return 0;
 }
 bool isStandart(const std::string& s){
 	return (s.size() >= 5 && std::string(s.begin(), s.begin() + 5) == "-std=");
@@ -134,7 +134,7 @@ void getRestFlags(const std::vector<std::string>& args, std::string& s){
 		}
 	}
 }
-void getAddDirs(std::vector<std::string>& args,const std::string& cd, std::vector<std::string>& parameters){
+int getAddDirs(std::vector<std::string>& args,const std::string& cd, std::vector<std::string>& parameters){
 	
 	std::vector<std::string> AddInc, fUnInc, defInc;
 	if(parameters[CFG_ADD_INCLUDE] != "-1") AddInc = split(parameters[CFG_ADD_INCLUDE]);
@@ -143,9 +143,18 @@ void getAddDirs(std::vector<std::string>& args,const std::string& cd, std::vecto
 	while(it != args.end()){
 		if(isFlag(*it) && (*it)[1] == 'I'){
 			std::string folder((*it).begin() + 2, (*it).end());
+			it = args.erase(it);
+			if(folder.empty()){
+				if(it == args.end() || isFlag(*it) || find(keyWords, *it) != -1){
+					std::cerr << "=================== ERROR ===================" << std::endl;
+					std::cerr << "no directory after -I flag" << std::endl;
+					return 1;
+				}
+				folder = *it;
+				it = args.erase(it);
+			}
 			std::string fullpath = getFullPath(cd, folder);
 			if(fullpath != "-1" && find(AddInc, fullpath) == -1) AddInc.push_back(fullpath);
-			args.erase(it);
 		}
 		else it++;
 	}
@@ -178,6 +187,7 @@ void getAddDirs(std::vector<std::string>& args,const std::string& cd, std::vecto
 			parameters[CFG_FORCE_UNLINK_DIRS] += (fUnInc[i] + " ");
 	}
 	else parameters[CFG_FORCE_UNLINK_DIRS] = "-1";
+	return 0;
 }
 
 

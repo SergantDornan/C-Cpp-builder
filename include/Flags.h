@@ -13,9 +13,9 @@ bool isFlag(const std::string&);
 std::vector<std::string> defaultConfig();
 std::vector<std::string> readConfig(const std::string&);
 void writeConfig(const std::string&, const std::vector<std::string>&);
-void getParameters(std::vector<std::string>&, const std::string&,
+int getParameters(std::vector<std::string>&, const std::string&,
 	std::vector<std::string>&);
-void getAddDirs(std::vector<std::string>&,const std::string&, std::vector<std::string>&);
+int getAddDirs(std::vector<std::string>&,const std::string&, std::vector<std::string>&);
 int findEntryFile(std::vector<std::string>&,
 	const std::string&,  std::vector<std::string>&);
 void getNameAfterFlag(const std::vector<std::string>&,
