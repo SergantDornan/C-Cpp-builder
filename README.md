@@ -84,6 +84,25 @@ To recompile belder itself type:
 belder reinstall # only works if you still got original source code
 ```
 
+# system libraries and symbol cache
+"belder anal" analyzes libraries and saves their symbols to ~/builder/anal, this cache is shared by all projects. A cached file is analyzed again when the library changes
+
+Besides the libraries of the project and of the -I folders, belder looks for missing symbols in the libraries that lie in the folders where the linker of your compiler searches (the -L folders from "compiler -###", for example /usr/lib/x86_64-linux-gnu), but only in the libraries that were analyzed with "belder anal". Without "belder anal" system libraries like libm or libz are not found (add their folder with -I or link them with -l). These folders are not searched recursively, as the linker does. With -nostdlib or -nodefaultlibs these folders are not used. A build does not add anything to ~/builder/anal by itself
+
+```bash
+belder anal gcc   # once
+belder            # libm, libz ... are found without -I
+```
+
+All forms of the command:
+```bash
+belder anal /usr/lib ../mylibs    # all libraries and object files in these folders, recursively (like -I)
+belder anal g++                    # libraries in the folders where the linker of g++ searches, not recursively
+belder anal arm-none-eabi-gcc -mcpu=cortex-m4 -mthumb   # flags after the compiler are passed to it
+belder anal clear                  # remove all files from the cache (same as "belder anal clean")
+```
+If there is a folder with the same name as the compiler in the current directory, the folder is analyzed, write the path to the compiler to avoid it. The libraries from "belder anal /path" are not used in a build unless /path is added with -I or they lie right in the linker folders
+
 # creating library
 If the name of the output file matches the standards of the static or shared library name, you will get the library at the output
 

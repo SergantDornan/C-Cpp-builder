@@ -437,7 +437,10 @@ TEST_F(BelderFixture, ManyOutputFiles3) {
                 r3.hasOutput("Compiling"));
     auto r4 = runBelder({"main2.cpp", "-o", "out2"});
     EXPECT_BELDER_OK(r4, r4.diagnostic());
-    EXPECT_TRUE(r4.hasOutput("belder: nothing to link"));
+    EXPECT_TRUE(r4.hasOutput("Linking file: main2.cpp"));
+    EXPECT_FALSE(r4.hasOutput("Linking file: mult.cpp"));
+    auto r5 = runBelder({"main2.cpp", "-o", "out2"});
+    EXPECT_TRUE(r5.hasOutput("belder: nothing to link"));
 }
 
 TEST_F(BelderFixture, RebuildTestFileFromFuture) {

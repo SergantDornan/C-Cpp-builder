@@ -5,5 +5,6 @@
 #include "algs.h"
 
 void parse_ARLIB(binFile&);
+void parseArchiveMember(binFile&, int);
 
 #endif

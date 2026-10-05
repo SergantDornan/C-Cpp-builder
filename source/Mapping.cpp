@@ -182,16 +182,16 @@ std::pair<std::string,std::string> pathDecoder(
 	}
 
 	if(options.size() == 0){
-		std::cerr << "=================== ERROR ===================" << std::endl;
-		std::cerr << "No files found for this include path:" << std::endl;
-		std::cerr << "\t" << path << std::endl;
-		std::cerr << "This might happen if you got a lot of ../../../../ in #include line and empty folders in the project" << std::endl;
-		std::cerr << "Belder does not see empty folders (folders, that do not have files at the end)" << std::endl;
-		char y = 'n';
-		std::cerr << "Do you want to see map, contained inside belder? [y/n]: ";
-		std::cin >> y;
-		if(y == 'y') showTree(0, map[0], map);
-		std::cerr << std::endl;
+		// std::cerr << "=================== ERROR ===================" << std::endl;
+		// std::cerr << "No files found for this include path:" << std::endl;
+		// std::cerr << "\t" << path << std::endl;
+		// std::cerr << "This might happen if you got a lot of ../../../../ in #include line and empty folders in the project" << std::endl;
+		// std::cerr << "Belder does not see empty folders (folders, that do not have files at the end)" << std::endl;
+		// char y = 'n';
+		// std::cerr << "Do you want to see map, contained inside belder? [y/n]: ";
+		// std::cin >> y;
+		// if(y == 'y') showTree(0, map[0], map);
+		// std::cerr << std::endl;
 		return std::pair<std::string,std::string>({"-1", "-1"});
 	}
 	

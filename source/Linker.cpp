@@ -1,6 +1,32 @@
 #include "Linker.h"
 #include "ConfigIndex.h"
 #include "Process.h"
+#include "Toolchain.h"
+#include "Anal.h"
+
+static bool readSyms(std::ifstream& file, binFile& newfile){
+	unsigned long callNum = 0, defNum = 0;
+	std::string line;
+	if(!std::getline(file, line)) return false;
+	try{ callNum = std::stoul(line); }
+	catch(const std::exception&){ return false; }
+	if(!std::getline(file, line)) return false;
+	try{ defNum = std::stoul(line); }
+	catch(const std::exception&){ return false; }
+	for(unsigned long j = 0; j < callNum + defNum; ++j){
+		if(!std::getline(file, line)) return false;
+		if(line.size() < 3 || line[1] != ' ' || line[0] < '0' || line[0] > '2') return false;
+		if(j < callNum){
+			newfile.callStrong.push_back(line[0] - '0');
+			newfile.callSyms.push_back(line.substr(2));
+		}
+		else{
+			newfile.defStrong.push_back(line[0] - '0');
+			newfile.defSyms.push_back(line.substr(2));
+		}
+	}
+	return true;
+}
 
 // Возвращает true, если .sym-кэш прочитан успешно. На любом признаке порчи
 // (файл не открылся, оборван, нечисловые счётчики) возвращает false - вызывающий
@@ -8,63 +34,77 @@
 bool readSymfile(binFile& newfile, const std::string& symFile){
 	std::ifstream file(symFile);
 	if(!file.is_open()) return false;
-	unsigned long callNum = 0, defNum = 0;
+	unsigned long memberNum = 0;
 	std::string line;
 	for(int i = 0; i < 3; ++i)
 		if(!std::getline(file, line)) return false;
-	try{ callNum = std::stoul(line); }
+	try{ newfile.arch = std::stoul(line); }
 	catch(const std::exception&){ return false; }
+	if(!readSyms(file, newfile)) return false;
 	if(!std::getline(file, line)) return false;
-	try{ defNum = std::stoul(line); }
+	try{ memberNum = std::stoul(line); }
 	catch(const std::exception&){ return false; }
-	for(unsigned long j = 0; j < callNum; ++j){
-		if(!std::getline(file, line)) return false;
-		newfile.callSyms.push_back(line);
-	}
-	for(unsigned long j = 0; j < defNum; ++j){
-		if(!std::getline(file, line)) return false;
-		newfile.defSyms.push_back(line);
+	for(unsigned long j = 0; j < memberNum; ++j){
+		binFile member = {};
+		int parsed = 0;
+		if(!std::getline(file, member.name) || !std::getline(file, line)) return false;
+		std::istringstream in(line);
+		if(!(in >> member.offset >> parsed >> member.arch)) return false;
+		member.parsed = (parsed == 1);
+		if(!readSyms(file, member)) return false;
+		newfile.members.push_back(member);
 	}
 	return true;
+}
+
+static void writeSyms(std::ofstream& out, const binFile& newfile){
+	out << newfile.callSyms.size() << std::endl;
+	out << newfile.defSyms.size() << std::endl;
+	for(int i = 0; i < newfile.callSyms.size(); ++i)
+		out << int(i < newfile.callStrong.size() ? newfile.callStrong[i] : SYM_UNKNOWN) << " " << newfile.callSyms[i] << std::endl;
+	for(int i = 0; i < newfile.defSyms.size(); ++i)
+		out << int(i < newfile.defStrong.size() ? newfile.defStrong[i] : SYM_UNKNOWN) << " " << newfile.defSyms[i] << std::endl;
 }
 
 void createSymfile(binFile& newfile, const std::string& path){
 	std::ofstream out(path);
 	out << newfile.name << std::endl;
 	out << getChangeTime(newfile.name) << std::endl;
-	out << newfile.callSyms.size() << std::endl;
-	out << newfile.defSyms.size() << std::endl;
-	for(int i = 0; i < newfile.callSyms.size(); ++i)
-		out << newfile.callSyms[i] << std::endl;
-	for(int i = 0; i < newfile.defSyms.size(); ++i)
-		out << newfile.defSyms[i] << std::endl;
+	out << newfile.arch << std::endl;
+	writeSyms(out, newfile);
+	out << newfile.members.size() << std::endl;
+	for(int i = 0; i < newfile.members.size(); ++i){
+		out << newfile.members[i].name << std::endl;
+		out << newfile.members[i].offset << " " << newfile.members[i].parsed << " " << newfile.members[i].arch << std::endl;
+		writeSyms(out, newfile.members[i]);
+	}
 	out.close();
 }
 
-std::vector<std::string> toLinkList(const std::vector<std::string>& parameters,
-	const std::string& wd,const bool idgaf, const std::vector<std::string>& allLibs,
-	const std::vector<std::string>& pairSource){
-
+static std::vector<std::string> pairObjects(const std::string& wd, const std::vector<std::string>& pairSource){
 	std::string objFolder = wd + "/" + SOURCE_DIR + "/" + OBJECTS_DIR;
 	std::vector<std::string> allObj;
 	for(int i = 0; i < pairSource.size(); ++i){
 		std::string obj = objFolder + "/" + convertPathToName(pairSource[i]) + ".o";
 		if(exists(obj)) allObj.push_back(obj);
 	}
+	return allObj;
+}
+
+std::vector<std::string> toLinkList(const std::vector<std::string>& parameters,
+	const std::string& wd,const bool idgaf, const std::vector<std::string>& allLibs,
+	const std::vector<std::string>& pairSource, const int linkType, std::vector<std::string>& unresolved){
+
+	std::string objFolder = wd + "/" + SOURCE_DIR + "/" + OBJECTS_DIR;
+	std::vector<std::string> allObj = pairObjects(wd, pairSource);
 	std::vector<std::string> toLink;
 	std::vector<binFile> filesInfo;
-	binFile mainObj = {"main"};
 	toLink.push_back(objFolder + "/" + convertPathToName(parameters[CFG_ENTRY]) + ".o");
+	if(!exists(toLink[0])) return std::vector<std::string>{};
 	std::vector<std::string> forceLinkLibs, fLink;
 	if(parameters[CFG_FORCE_LINK_LIBS] != "-1") forceLinkLibs = split(parameters[CFG_FORCE_LINK_LIBS]);
 	if(parameters[CFG_FORCE_LINK] != "-1") fLink = split(parameters[CFG_FORCE_LINK]);
-    OneThreadObjAnal(wd,(objFolder + "/" + convertPathToName(parameters[CFG_ENTRY]) + ".o"),
-    	mainObj,allObj,allLibs,filesInfo);
-    unsigned long x = 0;
-    std::map<std::string, std::string> syms;
-    std::vector<binFile> binLink;
-    binLink.push_back(mainObj); // Эта штука нужна только для повторной проверки на конфликты
-	int code = findLinks(toLink, filesInfo, mainObj, syms, idgaf, binLink,wd);
+    OneThreadObjAnal(wd, allObj, filesInfo);
 	for(int i = 0; i < fLink.size(); ++i){
 		int index = -1;
 		for(int j = 0; j < filesInfo.size(); ++j){
@@ -82,17 +122,9 @@ std::vector<std::string> toLinkList(const std::vector<std::string>& parameters,
 			return std::vector<std::string>{};
 		}
 		if(find(toLink, filesInfo[index].name) == -1) toLink.push_back(filesInfo[index].name);
-		code |= findLinks(toLink, filesInfo, filesInfo[index], syms,idgaf,binLink,wd);
 	}
 	for(int i = 0; i < forceLinkLibs.size(); ++i){
-		int index = -1;
-		for(int j = 0; j < filesInfo.size(); ++j){
-			if(filesInfo[j].name == forceLinkLibs[i]){
-				index = j;
-				break;
-			}
-		}
-		if(index == -1){
+		if(!exists(forceLinkLibs[i])){
 			std::cerr << "====================== ERROR ======================" << std::endl;
 			std::cerr << "Cannot find file: " << forceLinkLibs[i] << std::endl;
 			std::cerr << "You specified this file as force link" << std::endl;
@@ -100,37 +132,13 @@ std::vector<std::string> toLinkList(const std::vector<std::string>& parameters,
 			std::cerr << "===================================================" << std::endl;
 			return std::vector<std::string>{};
 		}
-		if(find(toLink, filesInfo[index].name) == -1) toLink.push_back(filesInfo[index].name);
-		code |= findLinks(toLink, filesInfo, filesInfo[index], syms, idgaf,binLink,wd);
 	}
 
+	int code = findLinks(toLink, filesInfo, forceLinkLibs, allLibs, parameters, wd, idgaf, linkType, unresolved);
 	if(code != 0) return std::vector<std::string>{};
-	// ЕЩЕ ОДНА ПРОВЕРКА НА КОНФЛИКТЫ, очень нужная (первую не уберу потому что страшно)
-	// for(int i = 0; i < binLink.size()-1; ++i){
-	// 	for(int j = i + 1; j < binLink.size(); ++j){
-	// 		for(int h = 0; h < binLink[j].defSyms.size(); ++h){
-	// 			if(find(binLink[i].defSyms, binLink[j].defSyms[h]) != -1 && !idgaf){
-	// 				std::cerr << "=================== ERROR ===================" << std::endl;
-	// 				std::cerr << "multiple definition of symbol: " << std::endl;
-	// 				std::cerr << binLink[j].defSyms[h] << std::endl;
-	// 				std::cerr << std::endl;
-	// 				std::cerr << "First definition in file: " << getName(binLink[i].name) <<  std::endl;
-	// 				std::cerr << "Second definition in file: " << getName(binLink[j].name) << std::endl;
-	// 				std::cerr << std::endl;
-	// 				std::cerr << "You can choose not to link files forcibly by using the flag: --no-link-force [filename]" << std::endl;
-	// 				std::cerr << "Or you can run builder with --idgaf flag to ignore this error" << std::endl;
-	// 				std::cerr << std::endl;
-	// 				std::cerr << std::endl;
-	// 				return std::vector<std::string>{};
-	// 			}
-	// 		}
-	// 	}
-	// }
 	return toLink;
 }
-void OneThreadObjAnal(const std::string& wd, const std::string& name,binFile& mainObj,
-	const std::vector<std::string>& dirs,const std::vector<std::string>& allLibs,
-	std::vector<binFile>& filesInfo){
+void OneThreadObjAnal(const std::string& wd, const std::vector<std::string>& dirs, std::vector<binFile>& filesInfo){
 
 	// ------------- OBJ ANAL -------------
 	for(int i = 0; i < dirs.size(); ++i){
@@ -138,74 +146,25 @@ void OneThreadObjAnal(const std::string& wd, const std::string& name,binFile& ma
 		binFile newfile = {dirs[i]};
 		bool ok = exists(symFile) && readSymfile(newfile, symFile);
 		if(!ok){ // кэша нет или он повреждён - перечитываем из объектника
-			newfile.callSyms.clear();
-			newfile.defSyms.clear();
+			newfile = {dirs[i]};
 			parse_ELF_File(newfile);
-			createSymfile(newfile, symFile);
-		}
-		filesInfo.push_back(newfile);
-		if(newfile.name == name){
-			mainObj.name = std::move(newfile.name);
-			mainObj.callSyms = std::move(newfile.callSyms);
-			mainObj.defSyms = std::move(newfile.defSyms);
-		}
-	}
-	// ------------- LIB ANAL -------------
-	for(int i = 0; i < allLibs.size(); ++i){
-		std::string symFile = (wd + "/" + SYM_DIR + "/" + convertPathToName(allLibs[i]) + ".sym");
-		
-		binFile newfile = {allLibs[i]};
-		bool ok = exists(symFile) && readSymfile(newfile, symFile);
-		if(!ok){ // кэша нет или он повреждён - перечитываем из библиотеки
-			newfile.callSyms.clear();
-			newfile.defSyms.clear();
-			std::string libType = getLibType(allLibs[i]);
-			if(libType == "so") parse_ELF_File(newfile);
-			else if(libType == "a") parse_ARLIB(newfile);
 			createSymfile(newfile, symFile);
 		}
 		filesInfo.push_back(newfile);
 	}
 }
-int findLinks(std::vector<std::string>& toLink, const std::vector<binFile>& filesInfo,
-	const binFile& file, std::map<std::string,std::string>& syms, const bool idgaf,
-	std::vector<binFile>& binLink, const std::string& wd)
-{
-
-	// syms : <sym_name, file_name>
-	// syms служит для отслеживания конфликтов
-	for(int i = 0; i < file.callSyms.size(); ++i){
-		for(int j = 0; j < filesInfo.size(); ++j){
-			if(find(filesInfo[j].defSyms, file.callSyms[i]) != -1){ // Нашли совпадение
-				if(syms.find(file.callSyms[i]) != syms.end() &&
-					syms[file.callSyms[i]] != filesInfo[j].name && !idgaf)
-				{ // Уже такой был => уже определили => конфликт
-					std::cerr << "=================== ERROR ===================" << std::endl;
-					std::cerr << "multiple definition of symbol: " << std::endl;
-					std::cerr << file.callSyms[i] << std::endl;
-					std::cerr << std::endl;
-					std::cerr << "First definition in file: " << getName(syms[file.callSyms[i]]) << std::endl;
-					std::cerr << "Second definition in file: " << getName(filesInfo[j].name) << std::endl;
-					std::cerr << std::endl;
-					std::cerr << "You can choose not to link files forcibly by using the flag: --no-link-force [filename]" << std::endl;
-					std::cerr << "Or you can run builder with --idgaf flag to ignore this error" << std::endl;
-					std::cerr << std::endl;
-					std::cerr << std::endl;
-					return 1;
-				}
-				// Конфликтов нет, либо мы их игнорируем:
-				if(find(toLink, filesInfo[j].name) == -1){
-					toLink.push_back(filesInfo[j].name);
-					//std::cout << "Adding file: " << filesInfo[j].name << std::endl;
-					binLink.push_back(filesInfo[j]);
-					syms[file.callSyms[i]] = filesInfo[j].name;
-					findLinks(toLink, filesInfo, filesInfo[j], syms, idgaf, binLink,wd);
-				}
-			}
-		}
+void LibAnal(const std::string& wd, binFile& newfile){
+	// ------------- LIB ANAL -------------
+	std::string symFile = symfilePath(wd, newfile.name);
+	bool ok = readFreshSymfile(newfile, symFile);
+	if(!ok){ // кэша нет или он повреждён - перечитываем из библиотеки
+		newfile = {newfile.name};
+		std::string libType = getLibType(newfile.name);
+		if(libType == "a") parse_ARLIB(newfile);
+		else parse_ELF_File(newfile);
+		saveSymfile(newfile, symFile);
 	}
-	return 0;
-}	
+}
 static std::vector<std::string> linkState(const std::vector<std::string>& toLink,
 	const std::vector<std::string>& libsToLink){
 
@@ -218,7 +177,7 @@ static std::vector<std::string> linkState(const std::vector<std::string>& toLink
 }
 
 static bool isLinkUpToDate(const std::string& recordPath, const std::string& output,
-	const std::vector<std::string>& state){
+	const std::vector<std::string>& objects){
 
 	if(!exists(output)) return false;
 	std::vector<std::string> record;
@@ -226,9 +185,17 @@ static bool isLinkUpToDate(const std::string& recordPath, const std::string& out
 	std::ifstream in(recordPath);
 	while(std::getline(in, line)) record.push_back(line);
 	in.close();
-	return record.size() == state.size() + 1 &&
-		record[0] == getChangeTime(output) &&
-		std::equal(state.begin(), state.end(), record.begin() + 1);
+	const std::vector<std::string> state = linkState(objects, {});
+	if(record.size() < state.size() + 2 || record[0] != getChangeTime(output) ||
+		record[1] != std::to_string(objects.size()) ||
+		!std::equal(state.begin(), state.end(), record.begin() + 2)) return false;
+	for(int i = state.size() + 2; i < record.size(); ++i){
+		size_t space = record[i].rfind(' ');
+		if(space == std::string::npos) return false;
+		std::string lib = record[i].substr(0, space);
+		if(!exists(lib) || getChangeTime(lib) != record[i].substr(space + 1)) return false;
+	}
+	return true;
 }
 
 static void writeLinkRecord(const std::string& recordPath, const std::string& output,
@@ -252,7 +219,12 @@ std::string link(const std::string& wd, const std::string& pairDir,
 		return "compilation error";
 	//if(toCompile.size() == 0 && exists(parameters[CFG_OUTPUT]) && !relink)
 	//	return "nothing to link";
-	std::vector<std::string> toLink = toLinkList(parameters,wd,idgaf,allLibs,pairSource);
+	const std::string recordPath = pairDir + "/" + LINK_RECORD_FILE;
+	const std::vector<std::string> objects = pairObjects(wd, pairSource);
+	if(!relink && isLinkUpToDate(recordPath, parameters[CFG_OUTPUT], objects))
+		return "nothing to link";
+	std::vector<std::string> unresolved;
+	std::vector<std::string> toLink = toLinkList(parameters,wd,idgaf,allLibs,pairSource,linkType,unresolved);
 	if(toLink.size() == 0) return "link error";
 	std::vector<std::string> libsToLink, sharedLibDirs;
 	auto iter = toLink.begin();
@@ -264,7 +236,7 @@ std::string link(const std::string& wd, const std::string& pairDir,
 			// не найдет .so во время запуска. Собираем уникальные каталоги .so.
 			if(libType == "so"){
 				std::string dir = getFolder(*iter);
-				if(!dir.empty() && find(sharedLibDirs, dir) == -1)
+				if(!dir.empty() && find(sharedLibDirs, dir) == -1 && !isStandardLibDir(dir, parameters))
 					sharedLibDirs.push_back(dir);
 			}
 			toLink.erase(iter);
@@ -272,11 +244,6 @@ std::string link(const std::string& wd, const std::string& pairDir,
 		else iter++;
 	}
 	if(toLink.size() == 0) return "nothing to link";
-
-	const std::string recordPath = pairDir + "/" + LINK_RECORD_FILE;
-	const std::vector<std::string> state = linkState(toLink, libsToLink);
-	if(!relink && isLinkUpToDate(recordPath, parameters[CFG_OUTPUT], state))
-		return "nothing to link";
 
 	std::string objFolder = wd + "/" + SOURCE_DIR + "/" + OBJECTS_DIR;
 	if(exists(parameters[CFG_OUTPUT])) removeFile(parameters[CFG_OUTPUT]);
@@ -329,7 +296,9 @@ std::string link(const std::string& wd, const std::string& pairDir,
 		for(int i = 0; i < toLink.size(); ++i) argv.push_back(toLink[i]);
 		for(int i = CFG_LINK_FLAGS; i <= CFG_GENERAL_FLAGS; ++i)
 			if(parameters[i] != "-1") appendArgs(argv, parameters[i]);
+		if(libsToLink.size() != 0) argv.push_back("-Wl,--start-group");
 		for(int i = 0; i < libsToLink.size(); ++i) argv.push_back(libsToLink[i]);
+		if(libsToLink.size() != 0) argv.push_back("-Wl,--end-group");
 		// rpath на каталоги подключаемых .so, чтобы загрузчик нашел их в рантайме
 		for(int i = 0; i < sharedLibDirs.size(); ++i)
 			argv.push_back("-Wl,-rpath," + sharedLibDirs[i]);
@@ -354,8 +323,11 @@ std::string link(const std::string& wd, const std::string& pairDir,
 
 	if(code != 0){
 		removeFile(recordPath);
+		printUnresolved(unresolved);
 		return "link error";
 	}
+	std::vector<std::string> state = {std::to_string(objects.size())};
+	state += linkState(objects, libsToLink);
 	writeLinkRecord(recordPath, parameters[CFG_OUTPUT], state);
 
 	// Каталоги подключаемых .so теперь прописываются в сам бинарник через

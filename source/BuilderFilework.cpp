@@ -64,7 +64,7 @@ void getAllsource(std::vector<std::string>& source, const std::string& path,
     merge_sort(source);
 }
 void getAllLibs(std::vector<std::string>& libs, const std::string& path,
-    const std::vector<std::string>& fUnlib, const std::vector<std::string>& fUnIncludeDirs)
+    const std::vector<std::string>& fUnlib, const std::vector<std::string>& fUnIncludeDirs, bool recursive)
 {   
     auto dirs = getDirs(path);
     for(int i = 1; i < dirs.size(); ++i){
@@ -73,8 +73,8 @@ void getAllLibs(std::vector<std::string>& libs, const std::string& path,
         try {
             if(((pocket && (dirs[i] == cd + "/builder")) || getName(dirs[i]) == ".git") &&
                 std::filesystem::is_directory(dirs[i])) continue;
-            if(std::filesystem::is_directory(dirs[i]) && find(fUnIncludeDirs, dirs[i]) == -1) 
-                getAllLibs(libs, dirs[i], fUnlib,fUnIncludeDirs);
+            if(recursive && std::filesystem::is_directory(dirs[i]) && find(fUnIncludeDirs, dirs[i]) == -1) 
+                getAllLibs(libs, dirs[i], fUnlib,fUnIncludeDirs, recursive);
         } catch (const std::filesystem::filesystem_error& e) {
             continue;
         }

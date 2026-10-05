@@ -13,15 +13,27 @@ void parseELF(unsigned char* elf, binFile& newfile, unsigned long elf_size){
     uint8_t arch = uint8_t(*(elf + 4));
     if(arch == 1) { 
         Elf32_parse_result result;
+        result.type = 0;
+        result.arch = 0;
         parse32(result, elf, elf_size);
         newfile.callSyms = std::move(result.callSyms);
-        newfile.defSyms = std::move(result.defSyms);           
+        newfile.defSyms = std::move(result.defSyms);
+        newfile.callStrong = std::move(result.callStrong);
+        newfile.defStrong = std::move(result.defStrong);
+        newfile.type = result.type;
+        newfile.arch = result.arch;           
     }
     else if(arch == 2){
         Elf64_parse_result result;
+        result.type = 0;
+        result.arch = 0;
         parse64(result, elf, elf_size);
         newfile.callSyms = std::move(result.callSyms);
         newfile.defSyms = std::move(result.defSyms);
+        newfile.callStrong = std::move(result.callStrong);
+        newfile.defStrong = std::move(result.defStrong);
+        newfile.type = result.type;
+        newfile.arch = result.arch;
     } 
     else{
         std::cerr << "======================== ERROR ========================" << std::endl;

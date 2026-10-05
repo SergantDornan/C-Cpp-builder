@@ -14,6 +14,15 @@ void printHelp(){
 	std::cout << std::endl;
 	std::cout << "\tstatus\ttype \"belder status\" to see all information about project (flags, force-link and force-unlink list etc)" << std::endl;
 	std::cout << std::endl;
+	std::cout << "\tanal [path] [path] [path]\tanalyze all libraries and object files in the folders recursively" << std::endl;
+	std::cout << "\t\tand save their symbols to the cache shared by all projects (~/builder/anal)" << std::endl;
+	std::cout << "\t\tbelder anal /usr/lib (exmp)" << std::endl;
+	std::cout << "\tanal [compiler] [compiler flags]\tanalyze libraries in the folders where the linker of this compiler searches (not recursively)" << std::endl;
+	std::cout << "\t\tafter it belder finds libraries from these folders by itself (libm, libz ...) without -I" << std::endl;
+	std::cout << "\t\tbelder anal arm-none-eabi-gcc -mcpu=cortex-m4 -mthumb (exmp)" << std::endl;
+	std::cout << "\t\tif there is a folder with the same name as the compiler, the folder is analyzed (write the compiler path to avoid it)" << std::endl;
+	std::cout << "\tanal clear, anal clean\tremove all symbol files from the shared cache" << std::endl;
+	std::cout << std::endl;
 	std::cout << "\tclear, clean, mrproper\tremove build folder (with object files, dep files, configs)" << std::endl;
 	std::cout << "\tsilent_clear\tremove build folder with no output" << std::endl;
 	std::cout << std::endl;

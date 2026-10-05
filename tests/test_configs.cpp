@@ -355,7 +355,8 @@ TEST_F(ExcludedSourceFixture, ChangedSourceExcludedByOtherPairIsNotLost) {
     auto r5 = runBelder({"in1.cpp", "-o", "out1", "run"});
     EXPECT_BELDER_OK(r5, r5.diagnostic());
     EXPECT_TRUE(r5.hasOutput("Compiling file3.cpp")) << r5.diagnostic();
-    EXPECT_TRUE(r5.hasOutput("nothing to link")) << r5.diagnostic();
+    EXPECT_TRUE(r5.hasOutput("Linking file: in1.cpp")) << r5.diagnostic();
+    EXPECT_FALSE(r5.hasOutput("Linking file: file3.cpp")) << r5.diagnostic();
     EXPECT_TRUE(r5.hasOutput("in1=3")) << r5.diagnostic();
 
     auto r6 = runBelder({"in1.cpp", "-o", "out1"});
@@ -449,9 +450,30 @@ TEST_F(ConfigsFixture, LinkRecordHoldsOnlyFileState) {
     std::vector<std::string> lines;
     std::istringstream in(record);
     for (std::string line; std::getline(in, line);) lines.push_back(line);
-    ASSERT_EQ(lines.size(), 3u) << record;
+    ASSERT_EQ(lines.size(), 4u) << record;
     EXPECT_EQ(record.find("-O2"), std::string::npos) << record;
     EXPECT_EQ(record.find("-DMARK"), std::string::npos) << record;
-    EXPECT_NE(lines[1].find(".o "), std::string::npos) << record;
+    EXPECT_EQ(lines[1], "2") << record;
     EXPECT_NE(lines[2].find(".o "), std::string::npos) << record;
+    EXPECT_NE(lines[3].find(".o "), std::string::npos) << record;
+}
+
+TEST_F(ConfigsFixture, NewPairDoesNotSearchEntryInIncludeDirsOfOtherPair) {
+    REQUIRE_TOOLS_OR_SKIP({"g++"}, "entry lookup for a new pair");
+    std::string ext = tmpDir + "_ext";
+    makeDir(ext);
+    writeFile(ext + "/extmain.cpp", printingMain("_extmain_"));
+    write("main.cpp", printingMain("_local_"));
+    ASSERT_BELDER_OK(runBelder({"main.cpp", "-o", "o", "-I" + ext}), "pair with -I");
+
+    auto r1 = runBelder({"extmain.cpp", "-o", "o2", "run"});
+    EXPECT_EQ(r1.exitCode, 1) << r1.diagnostic();
+    EXPECT_TRUE(r1.hasOutput("Cannot find file: extmain.cpp")) << r1.diagnostic();
+    auto s1 = runBelder({"status"});
+    EXPECT_FALSE(s1.hasOutput("extmain.cpp")) << s1.diagnostic();
+
+    auto r2 = runBelder({"extmain.cpp", "-o", "o2", "-I" + ext, "run"});
+    EXPECT_BELDER_OK(r2, r2.diagnostic());
+    EXPECT_TRUE(r2.hasOutput("_extmain_")) << r2.diagnostic();
+    std::filesystem::remove_all(ext);
 }

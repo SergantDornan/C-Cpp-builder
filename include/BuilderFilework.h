@@ -27,7 +27,7 @@ void getAllheaders(std::vector<std::string>&,const std::string&,const std::vecto
 void getAllsource(std::vector<std::string>&,const std::string&,const std::vector<std::string>&,
 	const std::vector<std::string>&);
 void getAllLibs(std::vector<std::string>&,const std::string&,const std::vector<std::string>&,
-	const std::vector<std::string>&);
+	const std::vector<std::string>&, bool recursive = true);
 void getIncludes(std::vector<std::string>&,
     std::vector<std::string>&,
     const std::vector<FileNode>&,

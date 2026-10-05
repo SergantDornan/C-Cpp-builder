@@ -2,6 +2,7 @@
 
 #include "Flags.h"
 #include "ConfigIndex.h"
+#include "Anal.h"
 
 static void migrateLegacyLayout(const std::string& folder){
 	std::string legacyConfig = folder + "/" + CONFIG_FILE;
@@ -74,7 +75,7 @@ static std::string createEssentialsLocked(){
 	}
 	if(!isConfig){
 		for(int i = 1; i < mainDirs.size(); ++i){
-			if(std::filesystem::is_directory(mainDirs[i]))
+			if(std::filesystem::is_directory(mainDirs[i]) && getName(mainDirs[i]) != ANAL_DIR)
 				removeDirectory(mainDirs[i]);
 		}
 		createFile(root + "/" + CONFIG_FILE);

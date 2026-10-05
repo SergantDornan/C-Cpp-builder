@@ -66,7 +66,12 @@ int selectPair(std::vector<std::string>& args, const std::string& cd,
 	std::vector<std::string> base = defaultConfig();
 	std::string last = lastPairDir(projectDir);
 	if(last != "") base = readConfig(last + "/" + CONFIG_FILE);
-	if(findEntryFile(args, cd, base) != 0) return 1;
+	std::vector<std::string> search = defaultConfig();
+	std::vector<std::string> searchArgs = args;
+	if(getAddDirs(searchArgs, cd, search) != 0) return 1;
+	search[CFG_ENTRY] = base[CFG_ENTRY];
+	if(findEntryFile(args, cd, search) != 0) return 1;
+	base[CFG_ENTRY] = search[CFG_ENTRY];
 	getNameAfterFlag(args, "-o", base[CFG_OUTPUT]);
 	std::string output = getFullPath(cd, base[CFG_OUTPUT]);
 	if(output == "-1") return 1;

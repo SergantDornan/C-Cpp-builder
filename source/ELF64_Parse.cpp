@@ -7,6 +7,8 @@ void parse64(Elf64_parse_result& result,unsigned char* elf, unsigned long elf_si
     Elf64_Ehdr* elfHeader = (Elf64_Ehdr*)elf;
     const bool correctEndian = (checkSystemEndian() == elfHeader -> e_ident[5]);
     if(!correctEndian) swapBytesElfHeader(elfHeader);
+    result.type = elfHeader -> e_type;
+    result.arch = (uint32_t(elfHeader -> e_ident[4]) << 16) | elfHeader -> e_machine;
     
     // Проверка без переполнения: сначала отсекаем e_shoff > elf_size,
     // затем сравниваем количество секций с тем, сколько реально помещается.
@@ -23,7 +25,7 @@ void parse64(Elf64_parse_result& result,unsigned char* elf, unsigned long elf_si
         }
         for (size_t i = 0; i < elfHeader -> e_shnum; ++i) {
             Elf64_Shdr* sH = &sectionHeaders[i];
-            if (sH -> sh_type == 2 || sH -> sh_type == 11)
+            if (sH -> sh_type == ((result.type == 2 || result.type == 3) ? 11 : 2))
                 process_symbol_table64(result, elf, sH, sectionHeaders, correctEndian, elf_size, elfHeader->e_shnum);
         }
     } else {
@@ -75,12 +77,15 @@ void process_symbol_table64(Elf64_parse_result& result, unsigned char* elf,
         uint16_t symbol_section_index = symbol->st_shndx;
 
         if(symbol_section_index == 0){
-            if(symbol_bind == 1 || symbol_bind == 2){
+            if((symbol_bind == 1 || symbol_bind == 2) && result.type == 1){
                 result.callSyms.push_back(symbol_name);
+                result.callStrong.push_back(symbol_bind == 1);
             }
         }
-        else if((symbol_type == 1 || symbol_type == 2) && symbol_bind != 0){
+        else if((symbol_type == 1 || symbol_type == 2 || symbol_type == 6 || symbol_type == 10) && symbol_bind != 0 &&
+            (result.type == 1 || (symbol->st_other & 3) == 0 || (symbol->st_other & 3) == 3)){
             result.defSyms.push_back(symbol_name);
+            result.defStrong.push_back(symbol_bind == 1);
         }
     }
 }

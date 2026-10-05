@@ -100,6 +100,10 @@ typedef struct {
     std::string name;
     std::vector<std::string> callSyms;
     std::vector<std::string> defSyms;
+    std::vector<char> callStrong;
+    std::vector<char> defStrong;
+    uint16_t type;
+    uint32_t arch;
 } Elf64_parse_result; // copy of a binFile structure
 
 void parse64(Elf64_parse_result&, unsigned char*, unsigned long elf_size = 0);

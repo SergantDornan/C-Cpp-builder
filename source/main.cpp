@@ -9,6 +9,7 @@
 #include "ConfigIndex.h"
 #include "Process.h"
 #include "Configs.h"
+#include "Anal.h"
 
 // Следующая строка заполняется инсталлятором, не менять ее
 const std::string SourceCodeFolder;
@@ -58,8 +59,12 @@ int main(int argc, char* argv[]){
 	int numThreads = -1;
 	// Переделываем текущую директорию + ищем количество потоков:
 	auto it = args.begin();
+	bool inFlags = false;
 	while(it != args.end()){
-		if(*(it) == "-C"){
+		if(find(switchFlags, *it) != -1) inFlags = true;
+		else if(find(possibleFlags, *it) != -1 || find(keyWords, *it) != -1) inFlags = false;
+		if(inFlags) it++;
+		else if(*(it) == "-C"){
 			if((it+1) == args.end() || isFlag(*(it+1))){
 				std::cerr << "No directory after -C flag" << std::endl;
 				std::cerr << std::endl;
@@ -99,6 +104,8 @@ int main(int argc, char* argv[]){
 		else it++;
 	} 
 	// --------------------------------
+
+	if(args.size() != 0 && args[0] == "anal") return anal(args);
 
 	bool clear = (find(args, "clean") != -1 || 
 					find(args, "clear") != -1 ||
